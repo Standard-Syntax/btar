@@ -50,7 +50,7 @@ src/
     │   ├── index.ts    # runAllMetrics() orchestrator
     │   ├── types.ts    # MetricResult interface
     │   ├── runner.ts   # Shell command execution
-    │   ├── type-checker.ts  # tsc, mypy, go vet
+    │   ├── type-checker.ts  # tsc, Pyrefly, go vet
     │   ├── linter.ts   # eslint, ruff, golangci-lint
     │   └── coverage.ts # Coverage parsing
     ├── context/        # Context file generators
