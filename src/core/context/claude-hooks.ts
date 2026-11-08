@@ -103,7 +103,7 @@ export function generateClaudeHooks(options: ClaudeHooksOptions): ClaudeHooksCon
     if (options.buildSystem === "gradle") {
       typeCheckCommand = "./gradlew compileDebugJavaWithJavac";
     } else if (options.primaryLanguage === "python") {
-      typeCheckCommand = "mypy .";
+      typeCheckCommand = "uv run --python 3.14 pyrefly check";
     } else if (options.primaryLanguage === "go") {
       typeCheckCommand = "go vet ./...";
     } else {

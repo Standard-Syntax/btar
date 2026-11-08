@@ -261,7 +261,9 @@ describe("generateAgentsMd", () => {
 
       expect(result).toContain("my-python-project");
       expect(result).toMatch(/python/i);
-      expect(result).toMatch(/pip|pytest|poetry/i);
+      expect(result).toContain("uv sync --python 3.14");
+      expect(result).toContain("slipcover");
+      expect(result).toContain("Pyrefly");
     });
   });
 

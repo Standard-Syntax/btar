@@ -63,10 +63,10 @@ const LANGUAGE_CONFIG: Record<SupportedLanguage, LanguageConfig> = {
     styleNotes: "- Follow ESLint conventions\n- Use Prettier for formatting",
   },
   python: {
-    build: "pip install -e .",
-    test: "pytest",
-    lint: "ruff check .",
-    styleNotes: "- Follow PEP 8 style guide\n- Use type hints where possible",
+    build: "uv sync --python 3.14",
+    test: "uv run --python 3.14 python -m slipcover -m pytest -q",
+    lint: "uv run --python 3.14 ruff check . && uv run --python 3.14 ruff format --check .",
+    styleNotes: "- Target Python 3.14\n- Run Pyrefly for type checking\n- Use Ruff for linting and formatting",
   },
   go: {
     build: "go build ./...",

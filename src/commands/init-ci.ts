@@ -1,85 +1,64 @@
 /**
- * Init CI Command
- * Generates GitHub Actions workflow for BTAR analysis
+ * Generate CircleCI configuration for analyzing another project.
  */
-
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-/**
- * Options for init-ci command
- */
 export interface InitCiOptions {
   threshold?: number;
   force?: boolean;
 }
 
-/**
- * Generate GitHub Actions workflow YAML
- */
-function generateWorkflow(threshold: number): string {
-  return `name: BTAR Analysis
+export function generateCircleCiConfig(threshold: number): string {
+  if (!Number.isInteger(threshold) || threshold < 0 || threshold > 100) {
+    throw new Error("Threshold must be an integer between 0 and 100");
+  }
 
-on:
-  push:
-    branches: [main, master]
-  pull_request:
-    branches: [main, master]
+  return `version: 2.1
 
 jobs:
   analyze:
-    runs-on: ubuntu-latest
+    docker:
+      - image: cimg/python:3.14-node
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install BTAR
-        run: npm install -g btar
-
-      - name: Run Analysis
-        run: btar analyze . --json --fail-under ${threshold}
-
-      - name: Upload Results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: btar-report
+      - checkout
+      - run:
+          name: Install BTAR
+          command: npm install -g btar
+      - run:
+          name: Prepare Python when pyproject.toml exists
+          command: |
+            if [ -f pyproject.toml ]; then
+              python -m pip install uv
+              uv sync --python 3.14
+            fi
+      - run:
+          name: Agent-readiness verification
+          command: btar analyze . --json --fail-under ${threshold} > btar-report.json
+      - store_artifacts:
           path: btar-report.json
+
+workflows:
+  btar:
+    jobs:
+      - analyze
 `;
 }
 
-/**
- * Initialize CI workflow for BTAR
- * @param options - Command options
- */
-export async function initCiCommand(
-  options: InitCiOptions = {}
-): Promise<void> {
+export async function initCiCommand(options: InitCiOptions = {}): Promise<void> {
   const threshold = options.threshold ?? 70;
-  const workflowDir = join(process.cwd(), ".github", "workflows");
-  const workflowPath = join(workflowDir, "btar.yml");
+  const config = generateCircleCiConfig(threshold);
+  const directory = join(process.cwd(), ".circleci");
+  const destination = join(directory, "config.yml");
 
-  // Check if workflow already exists
-  if (existsSync(workflowPath) && !options.force) {
-    console.error(
-      `Workflow already exists: ${workflowPath}\nUse --force to overwrite.`
-    );
-    process.exit(1);
+  if (existsSync(destination) && !options.force) {
+    console.error(`CircleCI configuration already exists: ${destination}\nUse --force to overwrite.`);
+    process.exitCode = 1;
+    return;
   }
 
-  // Create .github/workflows directory if needed
-  if (!existsSync(workflowDir)) {
-    mkdirSync(workflowDir, { recursive: true });
-  }
-
-  // Generate and write workflow
-  const workflow = generateWorkflow(threshold);
-  writeFileSync(workflowPath, workflow);
-
-  console.log(`Created GitHub Actions workflow: ${workflowPath}`);
+  mkdirSync(directory, { recursive: true });
+  writeFileSync(destination, config);
+  console.log(`Created CircleCI configuration: ${destination}`);
   console.log(`Threshold: ${threshold}`);
 }

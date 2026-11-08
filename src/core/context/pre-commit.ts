@@ -16,6 +16,8 @@ export interface PreCommitHook {
   files?: string;
   args?: string[];
   additional_dependencies?: string[];
+  pass_filenames?: boolean;
+  language?: string;
 }
 
 /**
@@ -41,9 +43,8 @@ const REPO_URLS = {
   preCommitHooks: "https://github.com/pre-commit/pre-commit-hooks",
   prettier: "https://github.com/pre-commit/mirrors-prettier",
   eslint: "https://github.com/pre-commit/mirrors-eslint",
-  black: "https://github.com/psf/black",
   ruff: "https://github.com/astral-sh/ruff-pre-commit",
-  mypy: "https://github.com/pre-commit/mirrors-mypy",
+  pyrefly: "https://github.com/facebook/pyrefly-pre-commit",
   golangciLint: "https://github.com/golangci/golangci-lint",
   swiftformat: "https://github.com/nicklockwood/SwiftFormat",
   swiftlint: "https://github.com/realm/SwiftLint",
@@ -60,9 +61,8 @@ const REPO_VERSIONS = {
   preCommitHooks: "v4.5.0",
   prettier: "v3.1.0",
   eslint: "v8.56.0",
-  black: "24.1.1",
-  ruff: "v0.1.14",
-  mypy: "v1.8.0",
+  ruff: "v0.17.4",
+  pyrefly: "1.2.0",
   golangciLint: "v1.55.2",
   swiftformat: "0.53.0",
   swiftlint: "0.54.0",
@@ -141,11 +141,6 @@ const LANGUAGE_HOOKS: Record<SupportedLanguage, PreCommitRepo[]> = {
 
   python: [
     {
-      repo: REPO_URLS.black,
-      rev: REPO_VERSIONS.black,
-      hooks: [{ id: "black" }],
-    },
-    {
       repo: REPO_URLS.ruff,
       rev: REPO_VERSIONS.ruff,
       hooks: [
@@ -154,9 +149,9 @@ const LANGUAGE_HOOKS: Record<SupportedLanguage, PreCommitRepo[]> = {
       ],
     },
     {
-      repo: REPO_URLS.mypy,
-      rev: REPO_VERSIONS.mypy,
-      hooks: [{ id: "mypy" }],
+      repo: REPO_URLS.pyrefly,
+      rev: REPO_VERSIONS.pyrefly,
+      hooks: [{ id: "pyrefly-check", pass_filenames: false, language: "system" }],
     },
   ],
 

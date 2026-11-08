@@ -42,11 +42,11 @@ describe("getHooksForLanguage", () => {
     const hooks = getHooksForLanguage("python");
     expect(hooks.length).toBeGreaterThan(0);
 
-    // Should include black, ruff, mypy
+    // Should include Ruff and Pyrefly
     const repoUrls = hooks.map((h) => h.repo);
-    expect(repoUrls.some((url) => url.includes("black"))).toBe(true);
+    expect(repoUrls.some((url) => url.includes("black"))).toBe(false);
     expect(repoUrls.some((url) => url.includes("ruff"))).toBe(true);
-    expect(repoUrls.some((url) => url.includes("mypy"))).toBe(true);
+    expect(repoUrls.some((url) => url.includes("pyrefly"))).toBe(true);
   });
 
   it("returns hooks for Go", () => {
@@ -114,8 +114,10 @@ describe("generatePreCommitConfig", () => {
       const config = yaml.parse(configYaml) as PreCommitConfig;
 
       // Should include Python-specific hooks
-      const blackRepo = config.repos.find((r) => r.repo.includes("black"));
-      expect(blackRepo).toBeDefined();
+      const pyreflyRepo = config.repos.find((r) => r.repo.includes("pyrefly"));
+      expect(pyreflyRepo?.hooks[0]).toEqual({
+        id: "pyrefly-check", pass_filenames: false, language: "system",
+      });
 
       const ruffRepo = config.repos.find((r) => r.repo.includes("ruff"));
       expect(ruffRepo).toBeDefined();
@@ -138,7 +140,7 @@ describe("generatePreCommitConfig", () => {
       );
 
       // Should have Python hooks
-      expect(config.repos.some((r) => r.repo.includes("black"))).toBe(true);
+      expect(config.repos.some((r) => r.repo.includes("pyrefly"))).toBe(true);
       expect(config.repos.some((r) => r.repo.includes("ruff"))).toBe(true);
 
       // Should have TypeScript hooks
