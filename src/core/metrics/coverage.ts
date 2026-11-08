@@ -5,6 +5,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import * as os from "node:os";
 import type { DetectedLanguage, SupportedLanguage } from "../types.js";
 import type { MetricResult, MetricParser } from "./types.js";
 import { runTool } from "./runner.js";
@@ -54,34 +55,23 @@ function parseC8Coverage(stdout: string, _stderr: string, exitCode: number): num
 }
 
 /**
- * Parse pytest-cov coverage output
- * Looks for "TOTAL" line with percentage
- *
- * Example: "TOTAL         100    15    85%"
+ * Parse SlipCover JSON. Missing data is not zero-percent coverage.
  */
-function parsePytestCoverage(stdout: string, _stderr: string, exitCode: number): number {
-  // If tool not found, return -1
-  if (exitCode === 127) {
+export function parseSlipcoverJson(stdout: string, _stderr: string, exitCode: number): number {
+  if (exitCode !== 0) return -1;
+  try {
+    const parsed: unknown = JSON.parse(stdout);
+    if (!parsed || typeof parsed !== "object") return -1;
+    const report = parsed as { files?: unknown; summary?: { percent_covered?: unknown } };
+    if (!report.files || typeof report.files !== "object" ||
+      Array.isArray(report.files) || Object.keys(report.files).length === 0) return -1;
+    const percent = report.summary?.percent_covered;
+    if (typeof percent !== "number" || !Number.isFinite(percent) ||
+      percent < 0 || percent > 100) return -1;
+    return percent;
+  } catch {
     return -1;
   }
-
-  // Look for TOTAL line with percentage
-  // Format: "TOTAL ... XX%"
-  const totalMatch = stdout.match(/^TOTAL\s+.*?(\d+)%/m);
-  if (totalMatch) {
-    const value = parseInt(totalMatch[1], 10);
-    return isNaN(value) ? 0 : Math.min(100, Math.max(0, value));
-  }
-
-  // Alternative: coverage.py format
-  // "Total coverage: XX.X%"
-  const coverageMatch = stdout.match(/(?:total|overall)\s+coverage[:\s]*([\d.]+)%/i);
-  if (coverageMatch) {
-    const value = parseFloat(coverageMatch[1]);
-    return isNaN(value) ? 0 : Math.min(100, Math.max(0, value));
-  }
-
-  return 0;
 }
 
 /**
@@ -251,9 +241,9 @@ export const COVERAGE_TOOLS: Record<SupportedLanguage, CoverageTool> = {
     parseCoverage: parseC8Coverage,
   },
   python: {
-    tool: "pytest-cov",
-    command: ["pytest", "--cov=.", "--cov-report=term-missing", "-q"],
-    parseCoverage: parsePytestCoverage,
+    tool: "slipcover",
+    command: ["python", "-m", "slipcover", "--json", "-m", "pytest", "-q"],
+    parseCoverage: parseSlipcoverJson,
   },
   go: {
     tool: "go test",
@@ -356,6 +346,49 @@ async function detectJsCoverageTool(directory: string): Promise<CoverageTool> {
 }
 
 /**
+ * Use a fresh temporary JSON report; reject failed tests and missing evidence.
+ */
+async function measurePythonCoverage(directory: string): Promise<MetricResult> {
+  const tool = "slipcover";
+  let tempDir: string | undefined;
+  const failure = (raw: string): MetricResult => ({
+    metric: "test_coverage", tool, value: -1, success: false, raw,
+  });
+
+  try {
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "btar-slipcover-"));
+    const output = path.join(tempDir, "coverage.json");
+    const result = await runTool({
+      command: ["python", "-m", "slipcover", "--json", "--out", output, "-m", "pytest", "-q"],
+      cwd: directory,
+      timeout: 120000,
+    });
+
+    if (result.timedOut) return failure("SlipCover timed out");
+    if (result.exitCode !== 0) return failure(
+      result.stderr || result.stdout || "Python tests or SlipCover failed"
+    );
+
+    let report: string;
+    try {
+      report = await fs.readFile(output, "utf8");
+    } catch {
+      return failure("SlipCover did not create its coverage report");
+    }
+    const value = parseSlipcoverJson(report, "", 0);
+    if (value < 0) return failure("Invalid or empty SlipCover coverage report");
+    return {
+      metric: "test_coverage", tool, value, success: true,
+      raw: result.stdout.slice(0, 1000),
+    };
+  } catch (error) {
+    return failure(error instanceof Error ? error.message : String(error));
+  } finally {
+    if (tempDir) await fs.rm(tempDir, { recursive: true, force: true });
+  }
+}
+
+/**
  * Measure test coverage for a project
  *
  * @param language - The language to measure coverage for
@@ -379,6 +412,8 @@ export async function measureCoverage(
     typeof languageOrDetected === "string" ? undefined : languageOrDetected;
   const language: SupportedLanguage =
     typeof languageOrDetected === "string" ? languageOrDetected : languageOrDetected.language;
+
+  if (language === "python") return measurePythonCoverage(directory);
 
   // For JS/TS, detect the appropriate tool
   let toolConfig: CoverageTool;

@@ -1,6 +1,6 @@
 /**
  * Type Strictness Measurement
- * Runs type checkers (tsc, mypy, go vet) and counts errors
+ * Runs type checkers (tsc, Pyrefly, go vet) and counts errors
  */
 
 import type { DetectedLanguage, SupportedLanguage } from "../types.js";
@@ -49,32 +49,24 @@ export function parseTscErrors(
 }
 
 /**
- * Parse mypy (Python type checker) output for error count
- *
- * Matches patterns like:
- * - "foo.py:10: error: ..."
- * - "Found 5 errors in 3 files"
+ * Parse machine-readable Pyrefly JSON; malformed evidence is unavailable.
  */
-export function parseMypyErrors(
-  stdout: string,
-  stderr: string,
-  exitCode: number
-): number {
-  if (exitCode === 0) {
-    return 0;
+export function parsePyreflyErrors(stdout: string, _stderr: string, exitCode: number): number {
+  if (exitCode === 127) return -1;
+  try {
+    const data: unknown = JSON.parse(stdout);
+    if (!data || typeof data !== "object" || !("errors" in data)) return -1;
+    const errors = (data as { errors: unknown }).errors;
+    if (!Array.isArray(errors)) return -1;
+    if (errors.some((item) => !item || typeof item !== "object" ||
+      typeof (item as { severity?: unknown }).severity !== "string")) return -1;
+    const count = errors.filter((item) =>
+      (item as { severity: string }).severity.toLowerCase() === "error"
+    ).length;
+    return exitCode !== 0 && count === 0 ? -1 : count;
+  } catch {
+    return -1;
   }
-
-  const combined = stdout + stderr;
-
-  // Check for summary line "Found N error(s)"
-  const summaryMatch = combined.match(/Found (\d+) errors?/i);
-  if (summaryMatch) {
-    return parseInt(summaryMatch[1], 10);
-  }
-
-  // Count individual error lines (file:line: error:)
-  const errorLines = combined.match(/:\d+: error:/g);
-  return errorLines ? errorLines.length : 0;
 }
 
 /**
@@ -133,9 +125,9 @@ export const TYPE_CHECKER_TOOLS: Record<
     parseErrors: parseTscErrors,
   },
   python: {
-    tool: "mypy",
-    command: ["mypy", "."],
-    parseErrors: parseMypyErrors,
+    tool: "pyrefly",
+    command: ["pyrefly", "check", "--output-format=json"],
+    parseErrors: parsePyreflyErrors,
   },
   go: {
     tool: "go vet",
@@ -284,6 +276,15 @@ export async function measureTypeStrictness(
 
   // Parse error count from output
   const errorCount = parseErrors(result.stdout, result.stderr, result.exitCode);
+  if (errorCount < 0) {
+    return {
+      metric: "type_strictness",
+      tool,
+      value: -1,
+      success: false,
+      raw: result.stderr || result.stdout || "Invalid type-checker output",
+    };
+  }
 
   return {
     metric: "type_strictness",
