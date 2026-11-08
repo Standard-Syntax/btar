@@ -277,7 +277,7 @@ export const FIX_TOOLS: Record<SupportedLanguage, FixTool> = {
   },
   python: {
     tool: "ruff",
-    command: ["ruff", "check", ".", "--fix"],
+    command: ["uv", "run", "--python", "3.14", "ruff", "check", ".", "--fix"],
     parseOutput: parseRuffFixOutput,
   },
   go: {

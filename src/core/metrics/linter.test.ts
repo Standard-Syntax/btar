@@ -153,8 +153,13 @@ describe("parseRuffJson", () => {
     expect(parseRuffJson("[]", "", 0)).toBe(0);
   });
 
-  it("should return 0 for empty output", () => {
+  it("should return 0 for empty output on a successful run", () => {
     expect(parseRuffJson("", "", 0)).toBe(0);
+  });
+
+  it("rejects startup failures instead of interpreting them as zero lint errors", () => {
+    expect(parseRuffJson("", "uv failed", 1)).toBe(-1);
+    expect(parseRuffJson("[]", "", 1)).toBe(-1);
   });
 
   it("should return -1 for invalid JSON", () => {

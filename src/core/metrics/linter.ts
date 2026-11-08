@@ -55,10 +55,10 @@ export function parseEslintJson(
 export function parseRuffJson(
   stdout: string,
   _stderr: string,
-  _exitCode: number
+  exitCode: number
 ): number {
   if (!stdout.trim()) {
-    return 0;
+    return exitCode === 0 ? 0 : -1;
   }
 
   try {
@@ -66,7 +66,7 @@ export function parseRuffJson(
     if (!Array.isArray(diagnostics)) {
       return -1;
     }
-    return diagnostics.length;
+    return diagnostics.length === 0 && exitCode !== 0 ? -1 : diagnostics.length;
   } catch {
     return -1;
   }
@@ -264,7 +264,7 @@ export const LINTER_TOOLS: Record<SupportedLanguage, LinterTool> = {
   },
   python: {
     tool: "ruff",
-    command: ["ruff", "check", ".", "--output-format", "json"],
+    command: ["uv", "run", "--python", "3.14", "ruff", "check", ".", "--output-format", "json"],
     parseErrors: parseRuffJson,
   },
   go: {

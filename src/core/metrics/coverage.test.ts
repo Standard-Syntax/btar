@@ -27,7 +27,7 @@ describe("COVERAGE_TOOLS", () => {
     it("maps python to SlipCover + pytest", () => {
       expect(COVERAGE_TOOLS.python.tool).toBe("slipcover");
       expect(COVERAGE_TOOLS.python.command).toEqual([
-        "python", "-m", "slipcover", "--json", "-m", "pytest", "-q",
+        "uv", "run", "--python", "3.14", "python", "-m", "slipcover", "--json", "-m", "pytest", "-q",
       ]);
     });
 

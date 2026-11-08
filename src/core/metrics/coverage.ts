@@ -242,7 +242,7 @@ export const COVERAGE_TOOLS: Record<SupportedLanguage, CoverageTool> = {
   },
   python: {
     tool: "slipcover",
-    command: ["python", "-m", "slipcover", "--json", "-m", "pytest", "-q"],
+    command: ["uv", "run", "--python", "3.14", "python", "-m", "slipcover", "--json", "-m", "pytest", "-q"],
     parseCoverage: parseSlipcoverJson,
   },
   go: {
@@ -359,7 +359,7 @@ async function measurePythonCoverage(directory: string): Promise<MetricResult> {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "btar-slipcover-"));
     const output = path.join(tempDir, "coverage.json");
     const result = await runTool({
-      command: ["python", "-m", "slipcover", "--json", "--out", output, "-m", "pytest", "-q"],
+      command: ["uv", "run", "--python", "3.14", "python", "-m", "slipcover", "--json", "--out", output, "-m", "pytest", "-q"],
       cwd: directory,
       timeout: 120000,
     });

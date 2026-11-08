@@ -126,7 +126,7 @@ export const TYPE_CHECKER_TOOLS: Record<
   },
   python: {
     tool: "pyrefly",
-    command: ["pyrefly", "check", "--output-format=json"],
+    command: ["uv", "run", "--python", "3.14", "pyrefly", "check", "--output-format=json"],
     parseErrors: parsePyreflyErrors,
   },
   go: {

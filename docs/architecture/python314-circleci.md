@@ -24,11 +24,11 @@ uv add --dev pyrefly ruff pytest slipcover
 uv sync --python 3.14
 ```
 
-- **Types**: run `pyrefly check --output-format=json` and count error
+- **Types**: run `uv run --python 3.14 pyrefly check --output-format=json` and count error
   diagnostics, rejecting malformed or nonconforming data.
 - **Lint and format**: Ruff checks and formats source files; generated
   pre-commit hooks include Ruff and the official system-installed Pyrefly hook.
-- **Coverage**: run `python -m slipcover --json --out <temp> -m pytest -q`
+- **Coverage**: run `uv run --python 3.14 python -m slipcover --json --out <temp> -m pytest -q`
   and parse `summary.percent_covered` from a fresh JSON report. Failed tests,
   reports with no files, invalid percentages, and missing reports fail closed.
 - **Generated agent guidance**: uses `uv`, Python 3.14, Ruff, Pyrefly,

@@ -36,7 +36,7 @@ describe("TYPE_CHECKER_TOOLS", () => {
       const config = TYPE_CHECKER_TOOLS.python;
       expect(config).not.toBeNull();
       expect(config?.tool).toBe("pyrefly");
-      expect(config?.command).toEqual(["pyrefly", "check", "--output-format=json"]);
+      expect(config?.command).toEqual(["uv", "run", "--python", "3.14", "pyrefly", "check", "--output-format=json"]);
     });
 
     it("maps go to go vet", () => {
