@@ -209,7 +209,7 @@ generateCommand
       if (options?.post !== false) hooks.push("PostToolUse");
       console.log(`Hooks: ${hooks.join(", ")}`);
       if (options?.post !== false) {
-        console.log("Post-tool analysis trusts and executes the project's Hatch environment.");
+        console.log("Post-tool analysis requires consent. Add --trust-project to its command to opt in to executing project code through Hatch.");
       }
     }
   );

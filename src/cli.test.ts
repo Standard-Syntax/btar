@@ -63,6 +63,7 @@ describe("local Bun CLI", () => {
     expect(output).not.toContain("Summary:");
     expect(output).not.toContain("pytest-cov");
     const json = run(["analyze", ".", "--trust-project", "--json"], root);
+    expect(json.status).toBe(1);
     expect(JSON.parse(String(json.stdout)).recommendations).toEqual([]);
     expect(String(json.stderr)).toContain("no Python code detected");
   });
@@ -168,6 +169,25 @@ describe("local Bun CLI", () => {
     const root = repository();
     expect(run(["context", "generate", "agents-md", root], tmpdir()).status).toBe(0);
     expect(readFileSync(join(root, "AGENTS.md"), "utf8")).toContain("hatch run pyrefly check");
+  });
+  it("explains consent for generated post-tool analysis", () => {
+    const root = repository();
+    const result = run(["context", "generate", "hooks", root], tmpdir());
+    expect(result.status).toBe(0);
+    expect(String(result.stdout)).toContain("Post-tool analysis requires consent");
+    expect(String(result.stdout)).toContain("--trust-project");
+    expect(String(result.stdout)).toContain("executing project code through Hatch");
+    const settings = JSON.parse(readFileSync(join(root, ".claude", "settings.json"), "utf8"));
+    const command = settings.hooks.PostToolUse[0].hooks[0].command;
+    expect(command).toContain("btar analyze");
+    expect(command).not.toContain("--trust-project");
+
+    const noPostRoot = repository();
+    const noPost = run(["context", "generate", "hooks", noPostRoot, "--no-post"], tmpdir());
+    expect(noPost.status).toBe(0);
+    expect(String(noPost.stdout)).not.toContain("Post-tool analysis");
+    const noPostSettings = JSON.parse(readFileSync(join(noPostRoot, ".claude", "settings.json"), "utf8"));
+    expect(noPostSettings.hooks.PostToolUse).toBeUndefined();
   });
   it("generates CircleCI for a separate repository and comparison branch", () => {
     const root = repository();

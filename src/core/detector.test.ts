@@ -93,7 +93,7 @@ describe("Python detection", () => {
 
   it("ignores Python environments and caches while finding sibling projects", async () => {
     const root = directory();
-    for (const name of ["venv", ".tox", ".nox", ".pytest_cache", ".mypy_cache", ".ruff_cache", "packages/one", "packages/two"]) {
+    for (const name of ["venv", ".tox", ".nox", ".pytest_cache", ".mypy_cache", ".ruff_cache", "__pycache__", "packages/one", "packages/two"]) {
       mkdirSync(join(root, name), { recursive: true });
       writeFileSync(join(root, name, "pyproject.toml"), "[project]\n");
     }
