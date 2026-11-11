@@ -20,9 +20,11 @@ BTAR supports Python repositories only. Target projects use Hatch with Pyrefly, 
 
 Choose the search tool according to the question:
 
-1. Use Probe MCP first for conceptual repository exploration, symbol relationships, and complete implementation context.
-2. Use `ast-grep` for syntax-aware structural questions and rewrites. Invoke it as `ast-grep`, quote patterns containing `$` with single quotes, and search before rewriting.
+1. Use Probe MCP for conceptual repository exploration, symbol relationships, and complete implementation context when available. Probe MCP is optional. Fall back to focused `rg` searches when it is unavailable.
+2. Use `ast-grep` for syntax-aware structural questions and rewrites when available. It is optional. Fall back to focused `rg` searches when it is unavailable. Invoke it as `ast-grep`, quote patterns containing `$` with single quotes, and search before rewriting.
 3. Use `rg` for literal text, filenames, configuration values, comments, documentation, and generated text.
+
+When using `rg` for structural questions, read each matching implementation to verify its scope before editing.
 
 Search before reading large files. Begin with focused queries and broaden only when needed.
 

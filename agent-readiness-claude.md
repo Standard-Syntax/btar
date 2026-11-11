@@ -2,7 +2,7 @@
 
 AI coding agents work best when a repository gives them fast, objective feedback. For a Python 3.14+ project, BTAR standardizes that feedback around Hatch, Pyrefly, Ruff, pytest, pytest-cov, Hypothesis, Gitleaks, Semgrep, diff-cover, and CircleCI.
 
-The first three tools feed BTAR's 100-point score. Gitleaks, Semgrep, and diff-cover are independent gates. A high score does not override a security finding, a failing test, or insufficient changed-line coverage.
+Pyrefly, Ruff, and pytest-cov feed BTAR's 100-point score. Gitleaks, Semgrep, and diff-cover are independent gates. A high score does not override a security finding, a failing test, or insufficient changed-line coverage.
 
 ## Establish the feedback loop
 
@@ -11,13 +11,16 @@ Define the project environment in `pyproject.toml`, then run the commands locall
 ```bash
 hatch run pyrefly check --output-format=json
 hatch run ruff check . --output-format=json
-hatch run pytest --cov --cov-report=json:coverage.json
+hatch run ruff format --check .
+hatch run pytest --cov --cov-report=json:coverage.json --cov-report=xml:coverage.xml
 gitleaks detect --no-banner
-semgrep scan --config auto
-diff-cover coverage.xml --compare-branch origin/main
+hatch run semgrep scan --config p/python --error --strict .
+hatch run diff-cover coverage.xml --compare-branch origin/main --fail-under 70
 ```
 
-Use the same commands in CircleCI. Keep a command in AGENTS.md only if a contributor can run it from a clean checkout.
+Fetch `origin/main` before the diff-cover check, or select your project's base branch. Use the threshold passed to `btar init-ci --threshold` if it differs from the default of 70.
+
+Use the same checks in CircleCI. Keep a command in AGENTS.md only if a contributor can run it from a clean checkout.
 
 ## Write tests that constrain behavior
 
@@ -29,4 +32,4 @@ State the behavior to preserve or add. Change the smallest useful unit. Run the 
 
 ## What BTAR generates
 
-`btar init-ci` generates a CircleCI job. `btar context generate agents-md`, `pre-commit`, and `hooks` generate local guidance and integration files. Each command refuses to overwrite an existing target unless invoked with `--force`.
+`btar init-ci` generates separate CircleCI `quality` and `secrets` jobs. `btar context generate agents-md`, `pre-commit`, and `hooks` generate local guidance and integration files. Each command refuses to overwrite an existing target unless invoked with `--force`.

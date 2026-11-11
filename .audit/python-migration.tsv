@@ -1,6 +1,6 @@
 ts	phase	decision	why	evidence	result
-2026-11-11T14:33:23Z	frame	Keep the report format and reduce target languages to Python	Existing command consumers rely on report maps; deleting other target variants removes unsupported states	src/core/types.ts	open
-2026-11-11T14:35:44Z	scope	Remove obsolete multilingual plans and bundled agent workflows	User requested removal of non-Python target instructions; Git preserves the previous versions	.planning	open
+2026-11-11T14:33:23Z	frame	Keep the report format and reduce target languages to Python	Existing command consumers rely on report maps; deleting other target variants removes unsupported states	src/core/types.ts	CLOSED
+2026-11-11T14:35:44Z	scope	Remove obsolete multilingual plans and bundled agent workflows	User requested removal of non-Python target instructions; Git preserves the previous versions	6503683a43591c12925810cee17ec4bdbd52eca9:.planning	CLOSED
 2026-11-11T14:47:31Z	core	Run Python-only measurements through Hatch and require Python 3.14+	Older interpreters and unavailable structured reports must not satisfy score gates	src/core/metrics/index.ts	VERIFIED
 2026-11-11T14:47:31Z	templates	Generate safe merge candidates and direct Python CircleCI checks	Existing repositories retain their metadata and CI does not depend on an unpublished package	src/commands/context.ts	VERIFIED
 2026-11-11T14:47:31Z	correction	Replace invalid Gitleaks package dependency with a verified binary download	A real Hatch install found no gitleaks package on PyPI	src/commands/init-ci.ts	VERIFIED
@@ -20,3 +20,5 @@ ts	phase	decision	why	evidence	result
 2026-11-11T16:12:36Z	publication	Split executable migration and documentation cleanup into two PR layers	Sequence work into verifiable units; the lower commit passes from a separate checkout	f35d72f	VERIFIED
 2026-11-11T16:12:36Z	evidence	Use the original base commit for deleted planning evidence	Supersedes the moving HEAD pointer now that publication commits exist	6503683a43591c12925810cee17ec4bdbd52eca9:.planning/research/STACK.md	VERIFIED
 2026-11-11T16:12:54Z	publication	Normalize terminal controls and trailing whitespace in committed logs	Raw local logs remain unchanged; their hashes are recorded for byte identity	.audit/evidence/README.md	VERIFIED
+2026-11-11T20:34:53Z	review	Close initial frame and scope decisions after completed implementation	The Python-only report types and tracked deletion of legacy plans fulfill these decisions; replaces their stale open statuses	src/core/types.ts;6503683a43591c12925810cee17ec4bdbd52eca9:.planning	VERIFIED
+2026-11-11T20:34:53Z	evidence	Publish hashes of tracked normalized logs and the exact normalization transform	Supersedes raw-only hash claims; checked the transform against all seven original local logs	.audit/evidence/README.md	VERIFIED

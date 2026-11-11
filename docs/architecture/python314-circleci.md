@@ -18,13 +18,15 @@ hatch run ruff check . --output-format=json
 hatch run pytest --cov --cov-report=json:coverage.json
 ```
 
-The generated project profile includes Hypothesis. The CircleCI profile adds Gitleaks, Semgrep, and diff-cover. These checks remain separate from the three-point score so a successful score cannot conceal a security or changed-line coverage failure.
+The generated project profile includes Hypothesis. The CircleCI profile adds Gitleaks, Semgrep, and diff-cover. These checks remain separate from the 100-point score so a successful score cannot conceal a security or changed-line coverage failure.
 
 ## CircleCI contract
 
 `btar context generate python-toolchain <directory>` creates a Python profile. It writes `pyproject.toml` when project and legacy packaging metadata are absent. It writes `pyproject.btar.toml` as a merge candidate when `pyproject.toml`, `setup.py`, or `setup.cfg` already exists, unless the caller gives an output path. The profile uses a skip-install Hatch environment with Pyrefly, Ruff, pytest, pytest-cov, Hypothesis, Semgrep, and diff-cover. Gitleaks is an external binary required for local secret scans.
 
-`btar init-ci [directory]` writes `.circleci/config.yml` unless the file already exists. With `--force`, it replaces that generated target. Generation first validates the required Hatch dependency declarations without executing project code. The generated job installs Hatch, checks that the selected environment uses Python 3.14 or newer, then runs Ruff lint and format checks, Pyrefly, pytest with coverage, diff-cover, Gitleaks, and Semgrep. `--threshold` sets diff-cover's changed-line coverage requirement. It stores coverage.xml as an artifact.
+`btar init-ci [directory]` writes `.circleci/config.yml` unless the file already exists. With `--force`, it replaces that generated target. Generation first validates the required Hatch dependency declarations without executing project code. The generated `quality` job installs Hatch, checks that the selected environment uses Python 3.14 or newer, then runs Ruff lint and format checks, Pyrefly, pytest with coverage, diff-cover, and Semgrep. `--threshold` sets diff-cover's changed-line coverage requirement, 70 percent by default. The job stores `coverage.xml` as an artifact.
+
+The separate `secrets` job checks out the repository, downloads and verifies Gitleaks, and runs the secret scan. The jobs do not share a workspace or coverage artifacts.
 
 The target CI file runs Python tools directly. It does not require BTAR to be installed.
 

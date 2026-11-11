@@ -26,6 +26,7 @@ requires-python = ">=3.14"
 
 [tool.hatch.envs.default]
 python = "3.14"
+skip-install = true
 dependencies = [
   "hypothesis>=6.170.15",
   "pyrefly>=1.4.1",
@@ -112,4 +113,4 @@ bun run lint
 bun run test
 ```
 
-The target profile supports Python only. A repository without Python markers produces no supported-project result.
+The target profile supports Python only. BTAR detects directories containing `pyproject.toml`, `hatch.toml`, or `setup.py` at high confidence. It detects `requirements.txt`, `Pipfile`, or `setup.cfg` at medium confidence. Marker detection uses filenames without validating their contents. A directory with a direct `.py` file also qualifies at medium confidence when it is outside an already detected project. Detection is recursive. Nested directories with explicit markers remain separate projects, while standalone files inside a detected project do not create additional projects. A repository with neither a marker nor a qualifying `.py` file produces no supported-project result.
