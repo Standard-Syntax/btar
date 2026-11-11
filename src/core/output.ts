@@ -26,6 +26,7 @@ export interface MetricOutput {
   tool: string;
   value: number;
   success: boolean;
+  error?: string;
 }
 
 /**
@@ -55,6 +56,7 @@ export interface RecommendationOutput {
 export interface FormatJsonOptions {
   /** Quality gate threshold (if set, gateResult will be included) */
   failUnder?: number;
+  ratchetFailure?: boolean;
   /** Recommendations to include in output */
   recommendations?: Recommendation[];
 }
@@ -106,6 +108,7 @@ function mapToRecord(
       tool: result.tool,
       value: result.value,
       success: result.success,
+      ...(!result.success && result.raw ? { error: result.raw.slice(0, 1000) } : {}),
     };
   }
   return record;
@@ -175,9 +178,10 @@ export function formatAsJson(
   };
 
   // Add gate result if threshold was specified
-  if (options?.failUnder !== undefined) {
-    output.gateResult =
-      scoreResult.score >= options.failUnder ? "passed" : "failed";
+  if (options?.failUnder !== undefined || options?.ratchetFailure !== undefined) {
+    const measurements = [...report.metrics.typeStrictness.values(), ...report.metrics.lintErrors.values(), ...report.metrics.coverage.values()];
+    const complete = report.languages.length > 0 && measurements.length === report.languages.length * 3 && measurements.every((result) => result.success);
+    output.gateResult = complete && !options.ratchetFailure && scoreResult.score >= (options.failUnder ?? 0) ? "passed" : "failed";
   }
 
   return JSON.stringify(output, null, 2);

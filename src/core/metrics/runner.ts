@@ -1,6 +1,6 @@
 /**
  * Tool Runner Utility
- * Subprocess execution for language metric tools
+ * Subprocess execution for Python project metric tools
  */
 
 import { spawn } from "node:child_process";
@@ -40,13 +40,13 @@ export interface RunToolOptions {
  * @example
  * ```ts
  * const result = await runTool({
- *   command: ["npx", "tsc", "--noEmit"],
+ *   command: ["hatch", "run", "pyrefly", "check"],
  *   cwd: "/path/to/project",
  *   timeout: 30000
  * });
  *
  * if (result.exitCode === 0) {
- *   console.log("TypeScript check passed");
+ *   console.log("Pyrefly check passed");
  * } else {
  *   console.error(result.stderr);
  * }

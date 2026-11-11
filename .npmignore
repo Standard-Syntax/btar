@@ -1,7 +1,0 @@
-.claude/
-.planning/
-*.tgz
-*.log
-coverage/
-.DS_Store
-agent-readiness-*.md

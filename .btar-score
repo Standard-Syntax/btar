@@ -1,9 +1,0 @@
-{
-  "score": 87,
-  "timestamp": "2026-01-18T00:37:50.833Z",
-  "breakdown": {
-    "typeStrictness": 30,
-    "lintErrors": 30,
-    "coverage": 27
-  }
-}

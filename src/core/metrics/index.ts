@@ -17,6 +17,7 @@ export { runTool } from "./runner.js";
 import { measureTypeStrictness } from "./type-checker.js";
 import { measureLintErrors } from "./linter.js";
 import { measureCoverage } from "./coverage.js";
+import { runTool } from "./runner.js";
 
 /**
  * Options for running all metrics
@@ -67,7 +68,7 @@ export interface MetricsReport {
  * ```ts
  * const report = await runAllMetrics({
  *   directory: "/path/to/project",
- *   languages: [{ language: "typescript", confidence: "high", markers: ["tsconfig.json"] }],
+ *   languages: [{ language: "python", confidence: "high", markers: ["pyproject.toml"], buildSystem: "hatch" }],
  *   onProgress: (metric, status) => console.log(`${metric}: ${status}`)
  * });
  *
@@ -85,6 +86,20 @@ export async function runAllMetrics(
   const typeStrictness = new Map<SupportedLanguage, MetricResult>();
   const lintErrors = new Map<SupportedLanguage, MetricResult>();
   const coverage = new Map<SupportedLanguage, MetricResult>();
+
+  const runtime = await runTool({
+    command: ["hatch", "run", "python", "-c", "import sys; print(sys.version.split()[0]); raise SystemExit(sys.version_info < (3, 14))"],
+    cwd: directory, timeout: 120000,
+  });
+  if (runtime.exitCode !== 0 || runtime.timedOut) {
+    const raw = `Python 3.14+ through Hatch is required. ${runtime.stderr || runtime.stdout}`;
+    for (const { language } of languages) {
+      typeStrictness.set(language, { metric: "type_strictness", tool: "pyrefly", value: -1, success: false, raw });
+      lintErrors.set(language, { metric: "lint_errors", tool: "ruff", value: -1, success: false, raw });
+      coverage.set(language, { metric: "test_coverage", tool: "pytest-cov", value: -1, success: false, raw });
+    }
+    return { languages, metrics: { typeStrictness, lintErrors, coverage }, summary: { totalTypeErrors: 0, totalLintErrors: 0, averageCoverage: 0 } };
+  }
 
   // Run metrics for each language
   // Pass full DetectedLanguage to metric functions for build system awareness

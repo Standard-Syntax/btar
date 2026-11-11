@@ -16,7 +16,7 @@ export type MetricType = "type_strictness" | "lint_errors" | "test_coverage";
 export interface MetricResult {
   /** Type of metric measured */
   metric: MetricType;
-  /** Tool that performed the measurement (e.g., "tsc", "eslint") */
+  /** Tool that performed the measurement */
   tool: string;
   /** Measured value (error count or percentage) */
   value: number;
@@ -39,7 +39,7 @@ export interface ToolMapping {
   language: SupportedLanguage;
   /** Metric type this tool measures */
   metric: MetricType;
-  /** Tool name (e.g., "tsc", "mypy", "eslint") */
+  /** Tool name */
   tool: string;
   /** Command to execute (first element is executable, rest are args) */
   command: string[];

@@ -1,20 +1,28 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * BTAR CLI entry point
  */
 
-import { Command } from "commander";
+import { Command, InvalidArgumentError } from "commander";
 import { VERSION } from "./index.js";
 import { analyzeCommand } from "./commands/analyze.js";
 import { initCiCommand } from "./commands/init-ci.js";
 import { contextCommand } from "./commands/context.js";
 import { fixCommand } from "./commands/fix.js";
 
+function percentage(value: string): number {
+  const score = Number(value);
+  if (!/^\d+$/.test(value) || !Number.isInteger(score) || score < 0 || score > 100) {
+    throw new InvalidArgumentError("Expected an integer between 0 and 100");
+  }
+  return score;
+}
+
 const program = new Command();
 
 program
   .name("btar")
-  .description("Transform brownfield codebases into agent-ready environments")
+  .description("Assess and prepare Python 3.14+ brownfield repositories")
   .version(VERSION);
 
 program
@@ -26,7 +34,7 @@ program
   .option(
     "--fail-under <score>",
     "Exit non-zero if score below threshold",
-    parseInt
+    percentage
   )
   .option("--ratchet", "Enforce no regression from .btar-score baseline")
   .option("--save-baseline", "Save current score as new baseline")
@@ -35,13 +43,16 @@ program
   });
 
 program
-  .command("init-ci")
-  .description("Generate CircleCI configuration for BTAR")
-  .option("-t, --threshold <score>", "Minimum score threshold", "70")
+  .command("init-ci [directory]")
+  .description("Generate Python quality checks for CircleCI")
+  .option("-t, --threshold <percent>", "Minimum changed-line coverage", percentage, 70)
   .option("-f, --force", "Overwrite existing workflow")
-  .action(async (options) => {
+  .option("--base-branch <branch>", "Branch for changed-line coverage", "main")
+  .action(async (directory: string | undefined, options) => {
     await initCiCommand({
-      threshold: parseInt(options.threshold, 10),
+      directory,
+      threshold: options.threshold,
+      baseBranch: options.baseBranch,
       force: options.force,
     });
   });
@@ -59,7 +70,7 @@ program
 
 program.parseAsync(process.argv).catch((error) => {
   console.error("Error:", error.message);
-  process.exit(1);
+  process.exitCode = 1;
 });
 
 export { program };
