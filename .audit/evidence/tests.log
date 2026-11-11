@@ -1,0 +1,70 @@
+$ bun --bun run vitest run --coverage
+
+ RUN  v3.2.4 /home/dscv/Repo/btar
+      Coverage enabled with v8
+
+ ✓ src/core/scoring.test.ts (17 tests) 8ms
+ ✓ src/core/context/python-toolchain.test.ts (1 test) 4ms
+ ✓ src/core/context/agents-md.test.ts (1 test) 4ms
+ ✓ src/core/metrics/coverage.test.ts (3 tests) 5ms
+ ✓ src/core/metrics/type-checker.test.ts (2 tests) 5ms
+ ✓ src/core/remediation/fixer.test.ts (3 tests) 5ms
+ ✓ src/core/metrics/linter.test.ts (9 tests) 5ms
+ ✓ src/core/detector.test.ts (6 tests) 7ms
+ ✓ src/core/remediation/ratchet.test.ts (18 tests) 13ms
+ ✓ src/core/context/claude-hooks.test.ts (3 tests) 8ms
+ ✓ src/commands/init-ci.test.ts (4 tests) 18ms
+ ✓ src/core/context/pre-commit.test.ts (1 test) 22ms
+ ✓ src/core/config.test.ts (18 tests) 42ms
+ ✓ src/cli.test.ts (13 tests) 1417ms
+
+ Test Files  14 passed (14)
+      Tests  99 passed (99)
+   Start at  08:46:52
+   Duration  1.67s (transform 336ms, setup 0ms, collect 842ms, tests 1.56s, environment 4ms, prepare 526ms)
+
+ % Coverage report from v8
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s
+-------------------|---------|----------|---------|---------|-------------------
+All files          |   31.04 |    85.88 |    90.9 |   31.04 |
+ src               |       0 |      100 |     100 |       0 |
+  cli.ts           |       0 |      100 |     100 |       0 | 6-74
+  index.ts         |       0 |      100 |     100 |       0 | 6
+ src/commands      |    5.28 |    83.33 |     100 |    5.28 |
+  analyze.ts       |       0 |      100 |     100 |       0 | 6-264
+  context.ts       |       0 |      100 |     100 |       0 | 6-239
+  fix.ts           |       0 |      100 |     100 |       0 | 6-110
+  init-ci.ts       |   64.86 |    77.77 |     100 |   64.86 | 75-87
+ src/core          |   59.93 |    89.36 |      50 |   59.93 |
+  config.ts        |   96.96 |    94.87 |     100 |   96.96 | 68-69
+  detector.ts      |     100 |    82.35 |     100 |     100 | 13,24,29,42,49-53
+  output.ts        |       0 |      100 |     100 |       0 | 101-188
+  progress.tsx     |       0 |        0 |       0 |       0 | 1-71
+  scoring.ts       |   96.82 |    94.44 |     100 |   96.82 | 83-84
+  types.ts         |     100 |      100 |     100 |     100 |
+ src/core/context  |   85.71 |      100 |     100 |   85.71 |
+  agents-md.ts     |   57.89 |      100 |     100 |   57.89 | 9-16
+  claude-hooks.ts  |     100 |      100 |     100 |     100 |
+  pre-commit.ts    |     100 |      100 |     100 |     100 |
+  ...-toolchain.ts |     100 |      100 |     100 |     100 |
+ src/core/metrics  |   21.12 |       80 |     100 |   21.12 |
+  coverage.ts      |   48.48 |    71.42 |     100 |   48.48 | 24-40
+  index.ts         |       0 |      100 |     100 |       0 | 10-169
+  linter.ts        |    61.9 |      100 |     100 |    61.9 | 21-28
+  runner.ts        |    1.78 |      100 |     100 |    1.78 | 55-127
+  type-checker.ts  |   65.21 |       50 |     100 |   65.21 | 23-30
+  types.ts         |       0 |        0 |       0 |       0 |
+ ...re/remediation |      72 |    72.72 |     100 |      72 |
+  fixer.ts         |   53.33 |    33.33 |     100 |   53.33 | 16-22
+  index.ts         |       0 |      100 |     100 |       0 | 6-22
+  ratchet.ts       |   88.88 |    76.47 |     100 |   88.88 | ...60,63-64,72-73
+  ...mendations.ts |       0 |      100 |     100 |       0 | 9-19
+-------------------|---------|----------|---------|---------|-------------------
+
+=============================== Coverage summary ===============================
+Statements   : 31.04% ( 367/1182 )
+Branches     : 85.88% ( 146/170 )
+Functions    : 90.9% ( 10/11 )
+Lines        : 31.04% ( 367/1182 )
+================================================================================

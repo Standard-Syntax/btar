@@ -1,30 +1,31 @@
 # btar
 
-This file provides context for AI coding agents.
+BTAR is a Bun-run TypeScript CLI that prepares Python 3.14+ brownfield repositories for agent work.
 
-## Languages
-
-- **Typescript** (high confidence)
-
-## Build
+## Implementation commands
 
 ```bash
-npm run build
+bun install --frozen-lockfile
+bun run build
+bun run typecheck
+bun run lint
+bun run test
 ```
 
-## Testing
+## Target profile
 
-```bash
-npm test
-```
+BTAR supports Python repositories only. Target projects use Hatch with Pyrefly, Ruff, pytest, pytest-cov, Hypothesis, Gitleaks, Semgrep, diff-cover, and CircleCI.
 
-## Code Style
+## Code search policy
 
-```bash
-npm run lint
-```
+Choose the search tool according to the question:
 
-### Typescript
+1. Use Probe MCP first for conceptual repository exploration, symbol relationships, and complete implementation context.
+2. Use `ast-grep` for syntax-aware structural questions and rewrites. Invoke it as `ast-grep`, quote patterns containing `$` with single quotes, and search before rewriting.
+3. Use `rg` for literal text, filenames, configuration values, comments, documentation, and generated text.
 
-- Follow TypeScript strict mode conventions
-- Use ESLint with TypeScript parser
+Search before reading large files. Begin with focused queries and broaden only when needed.
+
+## TypeScript
+
+Follow strict TypeScript conventions. Parse external values at boundaries. Keep JSON CLI output free of terminal rendering.
