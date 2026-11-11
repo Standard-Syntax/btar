@@ -1,0 +1,39 @@
+.agents/skills/verify-btar/scripts/control.py
+  s_17ecc3dd35930b::t_56987bbd18bd9f 95,106
+  s_17ecc3dd35930b::t_539d3b16f0a964 1-94,96-105,107-158
+.agents/skills/verify-btar/features/baselines.md
+  s_17ecc3dd35930b::t_f586432663a2b8 1-33
+.agents/skills/verify-btar/features/context-generation.md
+  s_17ecc3dd35930b::t_f586432663a2b8 1-27,29-37
+  s_17ecc3dd35930b::t_56987bbd18bd9f 28
+.agents/skills/verify-btar/features/fix.md
+  s_17ecc3dd35930b::t_f586432663a2b8 1-32
+.agents/skills/verify-btar/PROOF.md
+  s_17ecc3dd35930b::t_11be77b39b7db5 1-19
+.agents/skills/verify-btar/features/analysis.md
+  s_17ecc3dd35930b::t_f586432663a2b8 1-31
+.agents/skills/verify-btar/SKILL.md
+  s_17ecc3dd35930b::t_17be3007af7c8f 1-42,45-121,123-144
+  s_17ecc3dd35930b::t_bd8d03e56630ff 43-44,122
+.agents/skills/verify-btar/features/README.md
+  s_17ecc3dd35930b::t_17be3007af7c8f 1-2,4-15
+  s_17ecc3dd35930b::t_11be77b39b7db5 3
+.agents/skills/verify-btar/features/circleci.md
+  s_17ecc3dd35930b::t_f586432663a2b8 1-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "37c2a66933a47473f4bfd0d7a23cec8e9675a854",
+  "prompts": {},
+  "sessions": {
+    "s_17ecc3dd35930b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ccc3-3c16-7ad2-b7a7-b98da35d7506",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Derek Vitrano <derek.vitrano@gmail.com>"
+    }
+  }
+}
