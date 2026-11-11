@@ -1,0 +1,25 @@
+docs/architecture/python314-circleci.md
+  s_c8f412ab765fbd::t_9f463a77ba9ad8 3,9-10,25,27
+docs/USER-GUIDE.md
+  s_c8f412ab765fbd::t_9f463a77ba9ad8 36,60-63,67-69,74,77,80,85-90,98,102
+  s_c8f412ab765fbd::t_e5895f377ef513 35
+README.md
+  s_c8f412ab765fbd::t_9f463a77ba9ad8 32-35,39-43,52-57,63,67,78-79,85
+  s_c8f412ab765fbd::t_d3b401c99fb0b6 86
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4b67d3206e7d7968b9462c880056fb4ae741be78",
+  "prompts": {},
+  "sessions": {
+    "s_c8f412ab765fbd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1caff-ef88-7872-98e4-2238c8c20012",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Derek Vitrano <derek.vitrano@gmail.com>"
+    }
+  }
+}
