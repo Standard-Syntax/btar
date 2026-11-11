@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import type { DetectedLanguage } from "../types.js";
 
 export interface AgentsMdValidation { exists: boolean; issues: string[]; sections: string[]; }
@@ -11,8 +11,9 @@ const REQUIRED_SECTIONS = [
 ];
 
 export async function validateAgentsMd(filePath: string): Promise<AgentsMdValidation> {
-  if (!existsSync(filePath)) return { exists: false, issues: ["File not found"], sections: [] };
-  const content = readFileSync(filePath, "utf-8");
+  let content: string;
+  try { content = readFileSync(filePath, "utf-8"); }
+  catch { return { exists: false, issues: ["File not found"], sections: [] }; }
   if (content.trim() === "") return { exists: true, issues: ["Empty file"], sections: [] };
   const sections: string[] = [];
   let fence: { character: string; length: number } | undefined;
