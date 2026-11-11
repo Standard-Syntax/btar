@@ -1,0 +1,36 @@
+src/commands/init-ci.test.ts
+  s_c8f412ab765fbd::t_755def12df1460 38,87
+  s_c8f412ab765fbd::t_a82f160ef22991 77-86,88-102
+  s_c8f412ab765fbd::t_ab95733fb02aaf 19-20,33
+src/core/context/pre-commit.test.ts
+  s_c8f412ab765fbd::t_a82f160ef22991 4-6,9-20
+src/core/context/agents-md.test.ts
+  s_c8f412ab765fbd::t_a82f160ef22991 45-52
+src/core/context/agents-md.ts
+  s_c8f412ab765fbd::t_ab95733fb02aaf 1,14-16
+src/core/context/claude-hooks.test.ts
+  s_c8f412ab765fbd::t_755def12df1460 2,32-53
+src/core/context/pre-commit.ts
+  s_c8f412ab765fbd::t_ab95733fb02aaf 19-23
+src/core/context/python-toolchain.test.ts
+  s_c8f412ab765fbd::t_a82f160ef22991 7-8
+src/commands/init-ci.ts
+  s_c8f412ab765fbd::t_ab95733fb02aaf 7,9-10,12,17-21,53-54
+  s_c8f412ab765fbd::t_fade5309b411dd 8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ad4688237cd2f66b9583042a574505168ff6ec64",
+  "prompts": {},
+  "sessions": {
+    "s_c8f412ab765fbd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1caff-ef88-7872-98e4-2238c8c20012",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Derek Vitrano <derek.vitrano@gmail.com>"
+    }
+  }
+}
