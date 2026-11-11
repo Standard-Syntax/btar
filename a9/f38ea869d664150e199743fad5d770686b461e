@@ -1,0 +1,25 @@
+src/core/detector.test.ts
+  s_cfe3e5f8603b61::t_d8dd53c255cccf 96
+src/commands/context.ts
+  s_cfe3e5f8603b61::t_d8dd53c255cccf 212
+src/cli.test.ts
+  s_cfe3e5f8603b61::t_d8dd53c255cccf 66,173-174,176-185,187-190
+  s_cfe3e5f8603b61::t_71774555f6e0e9 175,186
+  s_cfe3e5f8603b61::t_8c58418cb43817 191
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a9f38ea869d664150e199743fad5d770686b461e",
+  "prompts": {},
+  "sessions": {
+    "s_cfe3e5f8603b61": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cc49-ef71-7ae2-bf3e-49bd89b0ae04",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Derek Vitrano <derek.vitrano@gmail.com>"
+    }
+  }
+}
