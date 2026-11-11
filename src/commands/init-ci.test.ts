@@ -100,3 +100,51 @@ it("matches Git branch validation and safely passes valid names to shell command
     }
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
+
+
+it("rejects shadowed tools and accepts dependencies merged into hatch.toml", async () => {
+  const root = mkdtempSync(join(tmpdir(), "btar-ci-hatch-"));
+  try {
+    writeFileSync(join(root, "pyproject.toml"), generatePythonToolchainConfig());
+    writeFileSync(join(root, "hatch.toml"), '[envs.default]\ndependencies = []\n');
+    await initCiCommand({ directory: root });
+    expect(process.exitCode).toBe(1);
+    expect(existsSync(join(root, ".circleci/config.yml"))).toBe(false);
+    process.exitCode = 0;
+    writeFileSync(join(root, "pyproject.toml"), '[project]\nname = "existing"\n');
+    writeFileSync(join(root, "hatch.toml"), '[envs.default]\nskip-install = true\ndependencies = ["pyrefly", "ruff", "pytest", "pytest-cov", "hypothesis", "semgrep", "diff-cover"]\n');
+    await initCiCommand({ directory: root });
+    expect(process.exitCode).toBe(0);
+    expect(existsSync(join(root, ".circleci/config.yml"))).toBe(true);
+  } finally { process.exitCode = 0; rmSync(root, { recursive: true, force: true }); }
+});
+
+
+it.each([
+  { name: "unrelated standalone settings", hatch: '[build]\ndirectory = "build"\n', passes: true },
+  { name: "a standalone non-default environment", hatch: '[envs.other]\ndependencies = []\n', passes: false },
+  { name: "an empty standalone environments table", hatch: '[envs]\n', passes: false },
+  { name: "a non-string standalone dependency", hatch: '[envs.default]\ndependencies = ["pyrefly", "ruff", "pytest", "pytest-cov", "hypothesis", "semgrep", "diff-cover", 123]\n', passes: false },
+  { name: "malformed standalone TOML", hatch: '[envs.default\n', passes: false },
+])("validates effective Hatch dependencies with $name", async ({ hatch, passes }) => {
+  const root = mkdtempSync(join(tmpdir(), "btar-ci-precedence-"));
+  try {
+    process.exitCode = 0;
+    writeFileSync(join(root, "pyproject.toml"), generatePythonToolchainConfig());
+    writeFileSync(join(root, "hatch.toml"), hatch);
+    await initCiCommand({ directory: root });
+    expect(process.exitCode).toBe(passes ? 0 : 1);
+    expect(existsSync(join(root, ".circleci/config.yml"))).toBe(passes);
+  } finally { process.exitCode = 0; rmSync(root, { recursive: true, force: true }); }
+});
+
+it("accepts standalone Hatch tools without pyproject metadata", async () => {
+  const root = mkdtempSync(join(tmpdir(), "btar-ci-standalone-"));
+  try {
+    process.exitCode = 0;
+    writeFileSync(join(root, "hatch.toml"), '[envs.default]\nskip-install = true\ndependencies = ["pyrefly", "ruff", "pytest", "pytest-cov", "hypothesis", "semgrep", "diff-cover"]\n');
+    await initCiCommand({ directory: root });
+    expect(process.exitCode).toBe(0);
+    expect(existsSync(join(root, ".circleci/config.yml"))).toBe(true);
+  } finally { process.exitCode = 0; rmSync(root, { recursive: true, force: true }); }
+});

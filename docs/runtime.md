@@ -29,14 +29,14 @@ A baseline records the Python scoring scope and the discovered project set. Lega
 
 ## Generate CI
 
-First generate the Python toolchain profile and merge its Hatch dependencies into the project's pyproject.toml. Existing pyproject.toml and legacy setup.py or setup.cfg metadata produce a separate merge candidate. Preserve the project's real packaging identity.
+First generate the Python toolchain profile. Existing `pyproject.toml`, `hatch.toml`, `setup.py`, or `setup.cfg` files produce a separate merge candidate. If `hatch.toml` exists, merge the candidate's Hatch tables there without the `tool.hatch.` prefix. Otherwise merge them into `pyproject.toml`. Merge other tool settings and metadata into `pyproject.toml`, preserving the project's real packaging identity.
 
 ```bash
 btar context generate python-toolchain /path/to/project
 btar init-ci /path/to/project
 ```
 
-`init-ci` checks the default Hatch dependency declarations without executing project code. It refuses to write a workflow when required tools are absent. Generated CI also checks that Hatch selects Python 3.14 or newer before running quality checks.
+`init-ci` checks the effective default Hatch dependency declarations without executing project code. An `envs` key in `hatch.toml` replaces the entire `[tool.hatch.envs]` table in `pyproject.toml`. It refuses to write a workflow when required tools are absent. Generated CI also checks that Hatch selects Python 3.14 or newer before running quality checks.
 
 ## Timeout boundaries
 

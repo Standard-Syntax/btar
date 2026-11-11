@@ -81,26 +81,33 @@ workflows:
 
 const REQUIRED_TOOLS = ["ruff", "pyrefly", "pytest", "pytest-cov", "hypothesis", "diff-cover", "semgrep"];
 
-function hatchDependencies(path: string): string[] {
+function hatchDependencies(directory: string): string[] {
   try {
-    const parsed: unknown = Bun.TOML.parse(readFileSync(path, "utf-8"));
-    if (typeof parsed !== "object" || parsed === null || !("tool" in parsed)) return [];
-    const tool = parsed.tool;
-    if (typeof tool !== "object" || tool === null || !("hatch" in tool)) return [];
-    const hatch = tool.hatch;
+    const projectPath = join(directory, "pyproject.toml");
+    const parsed: unknown = existsSync(projectPath) ? Bun.TOML.parse(readFileSync(projectPath, "utf-8")) : {};
+    let hatch: unknown;
+    if (typeof parsed === "object" && parsed !== null && "tool" in parsed) {
+      const tool = parsed.tool;
+      if (typeof tool === "object" && tool !== null && "hatch" in tool) hatch = tool.hatch;
+    }
+    const hatchPath = join(directory, "hatch.toml");
+    if (existsSync(hatchPath)) {
+      const standalone: unknown = Bun.TOML.parse(readFileSync(hatchPath, "utf-8"));
+      if (typeof standalone === "object" && standalone !== null && "envs" in standalone) hatch = standalone;
+    }
     if (typeof hatch !== "object" || hatch === null || !("envs" in hatch)) return [];
     const envs = hatch.envs;
     if (typeof envs !== "object" || envs === null || !("default" in envs)) return [];
     const env = envs.default;
     if (typeof env !== "object" || env === null || !("dependencies" in env)) return [];
-    return Array.isArray(env.dependencies) ? env.dependencies.filter((entry): entry is string => typeof entry === "string") : [];
+    return Array.isArray(env.dependencies) && env.dependencies.every((entry): entry is string => typeof entry === "string") ? env.dependencies : [];
   } catch {
     return [];
   }
 }
 
-function missingHatchTools(path: string): string[] {
-  const dependencies = hatchDependencies(path);
+function missingHatchTools(directory: string): string[] {
+  const dependencies = hatchDependencies(directory);
   const names = dependencies.map((entry) => {
     if (entry.includes(";")) return undefined;
     return entry.match(/^\s*([a-zA-Z0-9][a-zA-Z0-9._-]*)(?:\s*(?:[<>=!~]|@).*)?\s*$/)?.[1].toLowerCase().replaceAll("_", "-").replaceAll(".", "-");
@@ -117,9 +124,9 @@ export async function initCiCommand(options: { directory?: string; force?: boole
     process.exitCode = 1;
     return;
   }
-  const missing = missingHatchTools(join(targetDirectory, "pyproject.toml"));
+  const missing = missingHatchTools(targetDirectory);
   if (missing.length > 0) {
-    console.error(`Missing Hatch default environment dependencies: ${missing.join(", ")}. Generate and merge the python-toolchain configuration into pyproject.toml first.`);
+    console.error(`Missing Hatch default environment dependencies: ${missing.join(", ")}. Generate and merge the python-toolchain configuration into the active Hatch environment in hatch.toml or pyproject.toml first.`);
     process.exitCode = 1;
     return;
   }

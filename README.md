@@ -51,7 +51,7 @@ btar analyze . --trust-project --ratchet
 btar context generate python-toolchain .
 ```
 
-Merge any generated candidate into pyproject.toml, preserving existing metadata. Then generate CI and agent guidance.
+Merge any generated candidate into the configuration files described below, preserving existing metadata. Then generate CI and agent guidance.
 
 ```bash
 btar init-ci
@@ -64,7 +64,9 @@ btar context generate hooks .
 
 ## Prepare a project
 
-BTAR expects a Hatch-managed project. Run `btar context generate python-toolchain .` to create a profile. If `pyproject.toml`, `setup.py`, or `setup.cfg` already exists, BTAR writes `pyproject.btar.toml` as a merge candidate unless you select an explicit output path. Add the resulting development dependencies to the target project's `pyproject.toml`.
+BTAR expects a Hatch-managed project. Run `btar context generate python-toolchain .` to create a profile. If `pyproject.toml`, `hatch.toml`, `setup.py`, or `setup.cfg` already exists, BTAR writes `pyproject.btar.toml` as a merge candidate unless you select an explicit output path. When `hatch.toml` exists, merge the candidate's `[tool.hatch.*]` tables into it without the `tool.hatch.` prefix. For example, `[tool.hatch.envs.default]` becomes `[envs.default]`. Otherwise, merge those tables into `pyproject.toml`. Merge project metadata and the Ruff, pytest, and coverage tables into `pyproject.toml`, preserving the project's existing identity and settings.
+
+Hatch gives top-level keys in `hatch.toml` precedence over `[tool.hatch]` in `pyproject.toml`. An `envs` table in `hatch.toml` replaces the entire pyproject environment table. `btar init-ci` validates the default environment dependencies from that effective table. It rejects missing tools or malformed configuration before writing CI.
 
 ```toml
 [tool.hatch.envs.default]

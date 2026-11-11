@@ -222,8 +222,8 @@ generateCommand
   .action(async (directory?: string, options?: { output?: string; force?: boolean }) => {
     const dir = resolve(directory ?? ".");
     const projectFile = join(dir, "pyproject.toml");
-    const hasPackaging = [projectFile, join(dir, "setup.py"), join(dir, "setup.cfg")].some(existsSync);
-    const defaultOutput = hasPackaging ? join(dir, "pyproject.btar.toml") : projectFile;
+    const hasProjectConfiguration = [projectFile, join(dir, "hatch.toml"), join(dir, "setup.py"), join(dir, "setup.cfg")].some(existsSync);
+    const defaultOutput = hasProjectConfiguration ? join(dir, "pyproject.btar.toml") : projectFile;
     const outputPath = resolve(options?.output ?? defaultOutput);
     if (existsSync(outputPath) && !options?.force) {
       console.error(`File already exists: ${outputPath}\nUse --force to overwrite.`);
@@ -234,7 +234,8 @@ generateCommand
     writeFileSync(outputPath, generatePythonToolchainConfig(), "utf-8");
     if (outputPath.endsWith("pyproject.btar.toml")) {
       console.log(`Generated merge candidate: ${outputPath}`);
-      console.log("Merge its Hatch, Ruff, pytest, and coverage tables into pyproject.toml.");
+      console.log("Merge its project metadata, Ruff, pytest, and coverage tables into pyproject.toml, preserving existing settings.");
+      console.log("If hatch.toml exists, merge the tool.hatch tables there without the tool.hatch prefix; otherwise merge them into pyproject.toml.");
       return;
     }
     console.log(`Generated: ${outputPath}`);

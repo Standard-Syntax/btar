@@ -129,6 +129,18 @@ describe("local Bun CLI", () => {
     expect(run(["context", "generate", "python-toolchain", root], tmpdir()).status).toBe(1);
     expect(readFileSync(join(root, "pyproject.btar.toml"), "utf8")).toBe(candidate);
   });
+  it("preserves standalone Hatch configuration and writes a merge candidate", () => {
+    const root = repository();
+    const original = '[envs.default]\nskip-install = true\ndependencies = []\n';
+    writeFileSync(join(root, "hatch.toml"), original);
+    const result = run(["context", "generate", "python-toolchain", root], tmpdir());
+    expect(result.status).toBe(0);
+    expect(readFileSync(join(root, "hatch.toml"), "utf8")).toBe(original);
+    expect(existsSync(join(root, "pyproject.toml"))).toBe(false);
+    expect(readFileSync(join(root, "pyproject.btar.toml"), "utf8")).toContain('[tool.hatch.envs.default]');
+    expect(String(result.stdout)).toContain("hatch.toml");
+    expect(run(["context", "generate", "python-toolchain", root], tmpdir()).status).toBe(1);
+  });
   it("writes generated guidance in the requested repository", () => {
     const root = repository();
     expect(run(["context", "generate", "agents-md", root], tmpdir()).status).toBe(0);
