@@ -12,6 +12,12 @@ import {
 } from "./claude-hooks.js";
 
 describe("generateClaudeHooks", () => {
+  it("uses uv, Python 3.14 and Pyrefly for Python hooks", () => {
+    const hooks = generateClaudeHooks({ projectPath: ".", primaryLanguage: "python" });
+    expect(hooks.hooks.PreToolUse?.[0].hooks[0].command)
+      .toBe("uv run --python 3.14 pyrefly check");
+  });
+
   describe("default options", () => {
     it("produces valid hooks structure with PreToolUse and PostToolUse", () => {
       const config = generateClaudeHooks({ projectPath: "." });

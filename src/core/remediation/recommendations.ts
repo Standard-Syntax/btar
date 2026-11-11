@@ -49,7 +49,7 @@ export interface Recommendation {
 const LINT_FIX_TOOLS: Record<SupportedLanguage, string> = {
   typescript: "npx eslint --fix .",
   javascript: "npx eslint --fix .",
-  python: "ruff check --fix .",
+  python: "uv run --python 3.14 ruff check --fix .",
   go: "golangci-lint run --fix",
   java: "checkstyle",
   swift: "swiftlint lint --fix",

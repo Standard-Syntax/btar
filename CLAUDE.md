@@ -25,7 +25,7 @@ node dist/cli.js context validate              # Validate AGENTS.md
 node dist/cli.js context generate agents-md    # Generate AGENTS.md
 node dist/cli.js context generate pre-commit   # Generate pre-commit config
 node dist/cli.js context generate hooks        # Generate Claude Code hooks
-node dist/cli.js init-ci                       # Generate GitHub Actions workflow
+node dist/cli.js init-ci                       # Generate CircleCI configuration
 ```
 
 ## Architecture
@@ -50,7 +50,7 @@ src/
     │   ├── index.ts    # runAllMetrics() orchestrator
     │   ├── types.ts    # MetricResult interface
     │   ├── runner.ts   # Shell command execution
-    │   ├── type-checker.ts  # tsc, mypy, go vet
+    │   ├── type-checker.ts  # tsc, Pyrefly, go vet
     │   ├── linter.ts   # eslint, ruff, golangci-lint
     │   └── coverage.ts # Coverage parsing
     ├── context/        # Context file generators
@@ -81,6 +81,6 @@ src/
 python, typescript, javascript, go, java, kotlin, swift, ruby, php
 
 Each language maps to specific tools:
-- Type checkers: tsc, mypy, go vet
+- Type checkers: tsc, Pyrefly, go vet
 - Linters: eslint, ruff, golangci-lint
-- Coverage: lcov parsing, coverage.py
+- Coverage: lcov parsing, SlipCover JSON

@@ -140,13 +140,13 @@ Analyzing /path/to/your/project...
 Metrics:
 Type Strictness
   typescript (tsc): 47 errors ✗
-  python (mypy): 0 errors ✓
+  python (pyrefly): 0 errors ✓
 Lint Errors
   typescript (eslint): 23 errors ✗
   python (ruff): 0 errors ✓
 Test Coverage
   typescript (lcov): 62% ✗
-  python (coverage): 84% ✓
+  python (slipcover): 84% ✓
 
 Summary:
   Type errors: 47
@@ -166,7 +166,7 @@ Recommendations:
 
 **Metrics per language**: Each language is measured independently with appropriate tools:
 - TypeScript: `tsc --noEmit`, `eslint`, lcov
-- Python: `mypy --strict`, `ruff`, coverage.py
+- Python 3.14: `pyrefly check`, Ruff, SlipCover JSON
 
 **Recommendations**: Prioritized actions based on your score tier.
 
@@ -265,7 +265,7 @@ Coverage below 70% indicates significant blind spots. Strategies:
 
 ```bash
 # See what's uncovered
-pytest --cov=src/ --cov-report=term-missing
+python -m slipcover --source src -m pytest -q
 npm test -- --coverage
 ```
 
@@ -316,52 +316,30 @@ btar analyze . --ratchet
 
 ## Part 5: CI Integration
 
-### GitHub Actions
+### CircleCI
 
-Generate automatically:
+Run the generator to create `.circleci/config.yml`:
 
 ```bash
 btar init-ci --threshold 70
 ```
 
-Or create `.github/workflows/btar.yml`:
+The generated CircleCI 2.1 job runs in `cimg/python:3.14-node`,
+installs BTAR, and prepares Python projects with `uv sync --python 3.14`.
+It writes a JSON report to `btar-report.json` and stores that report as
+a CircleCI artifact.
 
-```yaml
-name: BTAR Analysis
+For a Python project, declare the modern verification tools:
 
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-
-jobs:
-  analyze:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install BTAR
-        run: npm install -g btar
-
-      - name: Run Analysis
-        run: btar analyze . --ratchet --fail-under 70
-
-      - name: Upload Report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: btar-report
-          path: .btar-score
+```bash
+uv add --dev pyrefly ruff pytest slipcover
+uv run --python 3.14 pyrefly check
+uv run --python 3.14 ruff check .
+uv run --python 3.14 python -m slipcover -m pytest -q
 ```
+
+Connect the repository to CircleCI, then validate the workflow using
+`circleci config validate .circleci/config.yml` and an actual pipeline.
 
 ### Quality Gates
 
@@ -567,7 +545,7 @@ BTAR delegates to language-specific tools. Install them:
 npm install -D typescript eslint
 
 # Python
-pip install mypy ruff pytest-cov
+uv add --dev pyrefly ruff pytest slipcover
 
 # Go
 go install golang.org/x/tools/cmd/goimports@latest
@@ -703,7 +681,7 @@ Generate Claude Code hooks.
 
 ### `btar init-ci`
 
-Generate GitHub Actions workflow.
+Generate CircleCI configuration.
 
 | Flag | Description |
 |------|-------------|

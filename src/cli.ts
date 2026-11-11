@@ -36,7 +36,7 @@ program
 
 program
   .command("init-ci")
-  .description("Generate GitHub Actions workflow for BTAR")
+  .description("Generate CircleCI configuration for BTAR")
   .option("-t, --threshold <score>", "Minimum score threshold", "70")
   .option("-f, --force", "Overwrite existing workflow")
   .action(async (options) => {

@@ -5,6 +5,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { COVERAGE_TOOLS, measureCoverage, parseJacocoCoverage } from "./coverage.js";
 import * as runner from "./runner.js";
+import * as fs from "node:fs/promises";
 
 // Mock the runner module
 vi.mock("./runner.js", () => ({
@@ -23,10 +24,11 @@ describe("COVERAGE_TOOLS", () => {
       expect(COVERAGE_TOOLS.javascript.command).toContain("c8");
     });
 
-    it("maps python to pytest-cov", () => {
-      expect(COVERAGE_TOOLS.python.tool).toBe("pytest-cov");
-      expect(COVERAGE_TOOLS.python.command).toContain("pytest");
-      expect(COVERAGE_TOOLS.python.command).toContain("--cov=.");
+    it("maps python to SlipCover + pytest", () => {
+      expect(COVERAGE_TOOLS.python.tool).toBe("slipcover");
+      expect(COVERAGE_TOOLS.python.command).toEqual([
+        "uv", "run", "--python", "3.14", "python", "-m", "slipcover", "--json", "-m", "pytest", "-q",
+      ]);
     });
 
     it("maps go to go test", () => {
@@ -97,35 +99,20 @@ All files |   100   |   100    |   100   |   100   |
     });
   });
 
-  describe("pytest-cov parser", () => {
+  describe("SlipCover JSON parser", () => {
     const parser = COVERAGE_TOOLS.python.parseCoverage;
-
-    it("parses TOTAL line percentage", () => {
-      const stdout = `
-Name                  Stmts   Miss  Cover   Missing
----------------------------------------------------
-src/__init__.py           0      0   100%
-src/main.py              50     10    80%
----------------------------------------------------
-TOTAL                    50     10    80%
-`;
-      expect(parser(stdout, "", 0)).toBe(80);
+    const report = (value: number) => JSON.stringify({
+      files: { "app.py": { executed_lines: [1], missing_lines: [2] } },
+      summary: { percent_covered: value },
     });
-
-    it("parses integer percentage", () => {
-      const stdout = `
-TOTAL                   100     15    85%
-`;
-      expect(parser(stdout, "", 0)).toBe(85);
+    it("reads global percentage", () => {
+      expect(parser(report(82.5), "", 0)).toBe(82.5);
     });
-
-    it("returns -1 for tool not found", () => {
-      expect(parser("", "pytest: command not found", 127)).toBe(-1);
-    });
-
-    it("returns 0 for no coverage data", () => {
-      const stdout = "no tests ran";
-      expect(parser(stdout, "", 0)).toBe(0);
+    it("rejects missing reports, out-of-range data, and failures", () => {
+      expect(parser('{"files":{},"summary":{"percent_covered":100}}', "", 0)).toBe(-1);
+      expect(parser("not-json", "", 0)).toBe(-1);
+      expect(parser(report(102), "", 0)).toBe(-1);
+      expect(parser(report(80), "", 1)).toBe(-1);
     });
   });
 
@@ -248,20 +235,38 @@ describe("measureCoverage", () => {
     expect(result.success).toBe(true);
   });
 
-  it("returns coverage percentage for python", async () => {
-    mockRunTool.mockResolvedValue({
-      stdout: "TOTAL     100     20    80%",
-      stderr: "",
-      exitCode: 0,
-      timedOut: false,
+  it("measures Python only from a fresh JSON artifact", async () => {
+    mockRunTool.mockImplementationOnce(async ({ command }) => {
+      const out = command[command.indexOf("--out") + 1];
+      await fs.writeFile(out, JSON.stringify({
+        files: { "app.py": { executed_lines: [1], missing_lines: [2] } },
+        summary: { percent_covered: 80 },
+      }));
+      return { stdout: "2 passed", stderr: "", exitCode: 0, timedOut: false };
     });
-
     const result = await measureCoverage("python", "/test/project");
-
     expect(result.metric).toBe("test_coverage");
-    expect(result.tool).toBe("pytest-cov");
+    expect(result.tool).toBe("slipcover");
     expect(result.value).toBe(80);
     expect(result.success).toBe(true);
+  });
+
+  it("rejects Python test failures", async () => {
+    mockRunTool.mockResolvedValueOnce({
+      stdout: "1 failed", stderr: "", exitCode: 1, timedOut: false,
+    });
+    const result = await measureCoverage("python", "/test/project");
+    expect(result.success).toBe(false);
+    expect(result.value).toBe(-1);
+  });
+
+  it("rejects a missing SlipCover report", async () => {
+    mockRunTool.mockResolvedValueOnce({
+      stdout: "1 passed", stderr: "", exitCode: 0, timedOut: false,
+    });
+    const result = await measureCoverage("python", "/test/project");
+    expect(result.success).toBe(false);
+    expect(result.raw).toContain("did not create");
   });
 
   it("returns coverage percentage for go", async () => {

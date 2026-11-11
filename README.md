@@ -123,7 +123,7 @@ btar context generate hooks --no-post # Disable post-tool hooks
 
 ### `btar init-ci`
 
-Generates a GitHub Actions workflow for automated BTAR analysis.
+Generates a CircleCI configuration for automated BTAR analysis.
 
 ```bash
 btar init-ci                  # Default threshold: 70
@@ -185,7 +185,7 @@ languages: []
 |----------|--------------|--------|----------|
 | TypeScript | `tsc --noEmit` | `eslint` | lcov |
 | JavaScript | — | `eslint` | lcov |
-| Python | `mypy --strict` | `ruff` | coverage.py |
+| Python 3.14 | `pyrefly check` | `ruff` | SlipCover JSON |
 | Go | `go vet` | `golangci-lint` | go test -cover |
 | Java | — | `checkstyle` | jacoco |
 | Kotlin | — | `ktlint` | jacoco |
@@ -202,42 +202,25 @@ Languages are auto-detected via marker files:
 
 ## CI Integration
 
-### GitHub Actions
+### CircleCI
 
-Generate a workflow automatically:
+Generate `.circleci/config.yml` automatically:
 
 ```bash
 btar init-ci --threshold 70
 ```
 
-Or create `.github/workflows/btar.yml` manually:
+The generated CircleCI 2.1 workflow uses a Python 3.14 + Node.js image,
+installs BTAR, runs its readiness gate, and saves `btar-report.json` as an
+artifact. Python projects with `pyproject.toml` are prepared using
+`uv sync --python 3.14`. Declare project verification dependencies first:
 
-```yaml
-name: BTAR Analysis
-
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-
-jobs:
-  analyze:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install BTAR
-        run: npm install -g btar
-
-      - name: Run Analysis
-        run: btar analyze . --json --fail-under 70
+```bash
+uv add --dev pyrefly ruff pytest slipcover
 ```
+
+BTAR's own repository uses CircleCI to run the TypeScript build, type
+checks, lint checks, tests, and its existing readiness ratchet.
 
 ### Ratchet Mode
 

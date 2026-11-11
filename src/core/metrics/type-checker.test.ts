@@ -8,7 +8,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   TYPE_CHECKER_TOOLS,
   parseTscErrors,
-  parseMypyErrors,
+  parsePyreflyErrors,
   parseGoVetErrors,
   parseGradleBuildErrors,
   measureTypeStrictness,
@@ -32,11 +32,11 @@ describe("TYPE_CHECKER_TOOLS", () => {
       expect(config?.command).toEqual(["npx", "tsc", "--noEmit"]);
     });
 
-    it("maps python to mypy", () => {
+    it("maps python to Pyrefly machine-readable checks", () => {
       const config = TYPE_CHECKER_TOOLS.python;
       expect(config).not.toBeNull();
-      expect(config?.tool).toBe("mypy");
-      expect(config?.command).toEqual(["mypy", "."]);
+      expect(config?.tool).toBe("pyrefly");
+      expect(config?.command).toEqual(["uv", "run", "--python", "3.14", "pyrefly", "check", "--output-format=json"]);
     });
 
     it("maps go to go vet", () => {
@@ -94,30 +94,23 @@ src/baz.ts(5,1): error TS7006: Parameter 'x' implicitly has an 'any' type.
   });
 });
 
-describe("parseMypyErrors", () => {
-  it("returns 0 when exit code is 0", () => {
-    const count = parseMypyErrors("Success: no issues found in 5 source files", "", 0);
-    expect(count).toBe(0);
+describe("parsePyreflyErrors", () => {
+  it("counts error severity but not warnings", () => {
+    const output = JSON.stringify({ errors: [
+      { severity: "error" }, { severity: "warn" }, { severity: "error" },
+    ] });
+    expect(parsePyreflyErrors(output, "", 1)).toBe(2);
   });
 
-  it("parses summary line 'Found N errors'", () => {
-    const stdout = `
-app/main.py:10: error: Incompatible return value type
-app/utils.py:25: error: Missing positional argument "name"
-Found 2 errors in 2 files (checked 10 source files)
-`;
-    const count = parseMypyErrors(stdout, "", 1);
-    expect(count).toBe(2);
+  it("accepts a clean machine-readable check", () => {
+    expect(parsePyreflyErrors('{"errors":[]}', "", 0)).toBe(0);
   });
 
-  it("counts :line: error: patterns when no summary", () => {
-    const stdout = `
-app/main.py:10: error: Incompatible return value type
-app/main.py:15: error: "str" has no attribute "foo"
-app/utils.py:25: error: Missing positional argument
-`;
-    const count = parseMypyErrors(stdout, "", 1);
-    expect(count).toBe(3);
+  it("rejects malformed, missing, or failed data", () => {
+    expect(parsePyreflyErrors("not-json", "", 1)).toBe(-1);
+    expect(parsePyreflyErrors('{"errors":[]}', "", 1)).toBe(-1);
+    expect(parsePyreflyErrors('{"message":"crash"}', "", 1)).toBe(-1);
+    expect(parsePyreflyErrors("", "not installed", 127)).toBe(-1);
   });
 });
 
@@ -239,8 +232,17 @@ describe("measureTypeStrictness", () => {
 
     expect(result.success).toBe(false);
     expect(result.value).toBe(-1);
-    expect(result.tool).toBe("mypy");
+    expect(result.tool).toBe("pyrefly");
     expect(result.raw).toBe("Tool execution timed out");
+  });
+
+  it("does not interpret failed Python tool output as zero errors", async () => {
+    mockRunTool.mockResolvedValue({
+      stdout: "fatal error", stderr: "", exitCode: 1, timedOut: false,
+    });
+    const result = await measureTypeStrictness("python", "/test");
+    expect(result.success).toBe(false);
+    expect(result.value).toBe(-1);
   });
 
   it("returns 0 errors when tool succeeds", async () => {

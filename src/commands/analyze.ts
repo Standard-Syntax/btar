@@ -108,6 +108,13 @@ export async function analyzeCommand(
         },
   });
 
+  // A missing measurement must not satisfy a CI gate.
+  const failedMeasurements = [
+    ...report.metrics.typeStrictness.values(),
+    ...report.metrics.lintErrors.values(),
+    ...report.metrics.coverage.values(),
+  ].filter((measurement) => !measurement.success);
+
   // Calculate score
   const scoreResult = calculateScore(report);
 
@@ -152,6 +159,11 @@ export async function analyzeCommand(
         recommendations,
       })
     );
+    if (failedMeasurements.length > 0) {
+      console.error(`BTAR verification incomplete: ${failedMeasurements.map((m) => m.tool).join(", ")}`);
+      process.exitCode = 1;
+      return;
+    }
     if (gateFailure || ratchetFailure) {
       process.exit(1);
     }
@@ -214,6 +226,12 @@ export async function analyzeCommand(
   }
 
   // Quality gate enforcement
+  if (failedMeasurements.length > 0) {
+    progress.error(`BTAR verification incomplete: ${failedMeasurements.map((m) => m.tool).join(", ")}`);
+    process.exitCode = 1;
+    return;
+  }
+
   if (gateFailure) {
     progress.error(
       `Score ${scoreResult.score} is below threshold ${options.failUnder}`
