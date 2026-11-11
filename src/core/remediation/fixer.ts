@@ -16,7 +16,7 @@ export const FIX_TOOLS: Record<SupportedLanguage, FixTool> = {
 export async function runFix(_language: SupportedLanguage, directory: string): Promise<FixResult> {
   const tool = FIX_TOOLS.python;
   const result = await runTool({ command: tool.command, cwd: directory, timeout: 120000 });
-  if (result.exitCode === 127) return { success: false, filesModified: 0, message: "ruff not found", tool: tool.tool };
+  if (result.exitCode === 127) return { success: false, filesModified: 0, message: "Hatch could not run or returned exit code 127. Install Hatch and configure Python 3.14+.", tool: tool.tool };
   if (result.timedOut) return { success: false, filesModified: 0, message: "Ruff timed out", tool: tool.tool };
   return tool.parseOutput(result.stdout, result.stderr, result.exitCode);
 }

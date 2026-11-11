@@ -25,7 +25,7 @@ else if(args[1]==='ruff') console.log('[]');
 else if(args[1]==='pytest') {
  const output=args.find(arg=>arg.startsWith('--cov-report=json:'));
  if(!output) process.exit(2);
- writeFileSync(output.slice('--cov-report=json:'.length),JSON.stringify({totals:{percent_covered:Number(process.env.BTAR_FAKE_COVERAGE??100)}}));
+ writeFileSync(output.slice('--cov-report=json:'.length),JSON.stringify({files:{"example.py":{executed_lines:[1]}},totals:{percent_covered:Number(process.env.BTAR_FAKE_COVERAGE??100)}}));
 } else process.exit(2);
 `, { mode: 0o755 });
 }
@@ -67,6 +67,14 @@ describe("local Bun CLI", () => {
     const result = run(["analyze", ".", "--trust-project", "--json", "--save-baseline"], root, { ...process.env, PATH: "" });
     expect(result.status).toBe(1);
     expect(existsSync(join(root, ".btar-score"))).toBe(false);
+  });
+  it("identifies Hatch when the fixer cannot find its executable", () => {
+    const result = run(["fix", ".", "--trust-project"], repository(), { ...process.env, PATH: "" });
+    expect(result.status).toBe(1);
+    const output = String(result.stdout) + String(result.stderr);
+    expect(output).toContain("Hatch");
+    expect(output).toContain("Install Hatch");
+    expect(output).not.toContain("ruff not found");
   });
   it("marks the JSON gate failed when tools are unavailable", () => {
     const result = run(["analyze", ".", "--trust-project", "--json", "--fail-under", "0"], repository(), { ...process.env, PATH: "" });

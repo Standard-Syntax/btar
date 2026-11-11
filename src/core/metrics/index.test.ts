@@ -35,7 +35,7 @@ if (args[1] === "pyrefly") {
   console.log(JSON.stringify(Array.from({ length: settings.lint }, () => ({ code: "E501" }))));
 } else if (args[1] === "pytest") {
   const output = args.find((arg) => arg.startsWith("--cov-report=json:")).slice("--cov-report=json:".length);
-  writeFileSync(output, JSON.stringify({ totals: { percent_covered: settings.coverage } }));
+  writeFileSync(output, JSON.stringify({ files: { "sample.py": {} }, totals: { percent_covered: settings.coverage } }));
 }
 `);
   chmodSync(executable, 0o755);

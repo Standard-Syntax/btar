@@ -42,3 +42,11 @@ it("recognizes alternative headings and ignores fenced headings", async () => {
     expect((await validateAgentsMd(file)).issues).toHaveLength(3);
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
+
+it("returns a structured missing-file result when the path cannot be read", async () => {
+  const root = mkdtempSync(join(tmpdir(), "btar-unreadable-"));
+  try {
+    expect(await validateAgentsMd(root)).toEqual({ exists: false, issues: ["File not found"], sections: [] });
+    expect(await validateAgentsMd(join(root, "absent"))).toEqual({ exists: false, issues: ["File not found"], sections: [] });
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});

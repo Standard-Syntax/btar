@@ -74,6 +74,16 @@ describe("Python detection", () => {
     expect((await detectLanguages(root, config)).map((project) => project.projectPath)).toEqual([".", "packages/nested"]);
   });
 
+  it("excludes hidden and visible nested projects with a universal glob", async () => {
+    const root = directory();
+    for (const name of [".hidden/project", "visible/project"]) {
+      mkdirSync(join(root, name), { recursive: true });
+      writeFileSync(join(root, name, "pyproject.toml"), "[project]\n");
+    }
+    expect((await detectLanguages(root, config)).map((project) => project.projectPath)).toContain(".hidden/project");
+    expect(await detectLanguages(root, { ...config, exclude: ["**/*"] })).toEqual([]);
+  });
+
   it("prunes excluded nested projects", async () => {
     const root = directory();
     for (const name of ["packages/keep", "packages/skip", ".venv/package"]) {

@@ -16,8 +16,8 @@ describe("generateCircleCiConfig", () => {
     expect(versionIndex).toBeGreaterThanOrEqual(0);
     expect(versionIndex).toBeLessThan(commands.findIndex((command: string) => command.includes("ruff check")));
     expect(source).toContain("hatch run pytest --cov");
-    expect(source).toContain("hatch run diff-cover coverage.xml --compare-branch=origin/main --fail-under=80");
-    expect(source).toContain("git fetch origin +refs/heads/main:refs/remotes/origin/main");
+    expect(source).toContain("hatch run diff-cover coverage.xml '--compare-branch=origin/main' --fail-under=80");
+    expect(source).toContain("git fetch origin '+refs/heads/main:refs/remotes/origin/main'");
     expect(source).toContain("gitleaks_8.24.2_linux_x64.tar.gz");
     expect(source).toContain("fa0500f6b7e41d28791ebc680f5dd9899cd42b58629218a5f041efa899151a8e");
     expect(source).toContain("/tmp/gitleaks detect --source=. --no-banner");
@@ -30,12 +30,12 @@ describe("generateCircleCiConfig", () => {
   });
 
   it("accepts a project-specific comparison branch", () => {
-    expect(generateCircleCiConfig(90, "trunk")).toContain("--compare-branch=origin/trunk --fail-under=90");
+    expect(generateCircleCiConfig(90, "trunk")).toContain("'--compare-branch=origin/trunk' --fail-under=90");
   });
 
   it("rejects branch names that could alter the generated shell command", () => {
     expect(() => generateCircleCiConfig(80, "main; curl evil")).toThrow();
-    expect(() => generateCircleCiConfig(80, "$(whoami)")).toThrow();
+    expect(() => generateCircleCiConfig(80, "--upload-pack=evil")).toThrow();
   });
 });
 
@@ -73,4 +73,30 @@ it("preserves an existing workflow when forced generation lacks prerequisites", 
     expect(process.exitCode).toBe(1);
     expect(readFileSync(destination, "utf8")).toBe("existing workflow");
   } finally { process.exitCode = 0; rmSync(root, { recursive: true, force: true }); }
+});
+
+it("defaults to a 70 percent threshold", () => {
+  expect(generateCircleCiConfig()).toContain("--fail-under=70");
+});
+
+it("matches Git branch validation and safely passes valid names to shell commands", async () => {
+  const { spawnSync } = await import("node:child_process");
+  const { mkdirSync, readFileSync } = await import("node:fs");
+  const root = mkdtempSync(join(tmpdir(), "btar-branch-"));
+  try {
+    for (const name of ["feature/", ".hidden", "foo.lock", "feature/.hidden", "feature@name", "@", "main;touch-pwned", "main$variable", "main`whoami`", "$(whoami)", "quote'branch", "-option", "foo..bar", "foo bar", "foo@{bar", "HEAD"]) {
+      const valid = spawnSync("git", ["check-ref-format", "--branch", name]).status === 0;
+      if (!valid) { expect(() => generateCircleCiConfig(70, name), name).toThrow(); continue; }
+      const config = yaml.parse(generateCircleCiConfig(70, name));
+      const command = config.jobs.quality.steps.find((step: { run?: { name: string } }) => step.run?.name === "Check changed-line coverage").run.command;
+      mkdirSync(join(root, "bin"), { recursive: true });
+      writeFileSync(join(root, "bin/git"), '#!/bin/sh\nprintf "%s\\n" "$@" > git-args\n', { mode: 0o755 });
+      writeFileSync(join(root, "bin/hatch"), '#!/bin/sh\nprintf "%s\\n" "$@" > hatch-args\n', { mode: 0o755 });
+      const run = spawnSync("/bin/sh", ["-c", command], { cwd: root, env: { ...process.env, PATH: join(root, "bin") } });
+      expect(run.status, name).toBe(0);
+      expect(readFileSync(join(root, "git-args"), "utf8").split("\n")).toEqual(["fetch", "origin", `+refs/heads/${name}:refs/remotes/origin/${name}`, ""]);
+      expect(readFileSync(join(root, "hatch-args"), "utf8").split("\n")).toContain(`--compare-branch=origin/${name}`);
+      expect(existsSync(join(root, "pwned"))).toBe(false);
+    }
+  } finally { rmSync(root, { recursive: true, force: true }); }
 });

@@ -40,6 +40,10 @@ describe.skipIf(process.platform === "win32")("runFix invocation", () => {
       expect(JSON.stringify(result)).toContain("timed out");
     } finally { spy.mockRestore(); }
   });
+  it("identifies a missing Hatch executable", async () => {
+    rmSync(join(root, "hatch"));
+    expect(await runFix("python", root)).toMatchObject({ success: false, message: "Hatch could not run or returned exit code 127. Install Hatch and configure Python 3.14+." });
+  });
   it("reports subprocess failure", async () => {
     process.env.BTAR_OUTPUT = "failure"; process.env.BTAR_STATUS = "2";
     expect((await runFix("python", root)).success).toBe(false);

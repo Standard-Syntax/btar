@@ -4,7 +4,8 @@ import { generatePythonToolchainConfig } from "./python-toolchain.js";
 describe("generatePythonToolchainConfig", () => {
   it("uses a non-packaging Python 3.14 Hatch environment", () => {
     const config = generatePythonToolchainConfig();
-    const parsed = Bun.TOML.parse(config) as { tool: { hatch: { envs: { default: { dependencies: string[] } } } } };
+    const parsed = Bun.TOML.parse(config) as { tool: { hatch: { envs: { default: { python: string; dependencies: string[] } } } } };
+    expect(parsed.tool.hatch.envs.default.python).toBe("3.14");
     const dependencies = parsed.tool.hatch.envs.default.dependencies;
     expect(dependencies).toEqual(expect.arrayContaining([
       expect.stringMatching(/^ruff[>=]/), expect.stringMatching(/^pyrefly[>=]/),

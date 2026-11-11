@@ -4,17 +4,21 @@ import { join } from "node:path";
 export function normalizeBaseBranch(baseBranch = "main"): string {
   const shortName = baseBranch.replace(/^origin\//, "");
   if (
-    !/^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(shortName) ||
-    shortName.includes("..") ||
-    shortName.includes("//") ||
-    shortName.endsWith(".")
+    !shortName || shortName === "HEAD" || shortName.startsWith("-") ||
+    [...shortName].some((char) => char.charCodeAt(0) <= 32 || char.charCodeAt(0) === 127 || "~^:?*[\\".includes(char)) ||
+    shortName.includes("..") || shortName.includes("@{") || shortName.endsWith(".") ||
+    shortName.split("/").some((part) => !part || part.startsWith(".") || part.endsWith(".lock"))
   ) {
-    throw new Error("Base branch must be a simple Git branch name");
+    throw new Error("Base branch must be a valid Git branch name");
   }
   return `origin/${shortName}`;
 }
 
-export function generateCircleCiConfig(threshold = 80, baseBranch = "main"): string {
+function shellQuote(value: string): string {
+  return `'${value.replaceAll("'", "'\\''")}'`;
+}
+
+export function generateCircleCiConfig(threshold = 70, baseBranch = "main"): string {
   if (!Number.isInteger(threshold) || threshold < 0 || threshold > 100) {
     throw new Error("Threshold must be an integer between 0 and 100");
   }
@@ -46,8 +50,8 @@ jobs:
       - run:
           name: Check changed-line coverage
           command: |
-            git fetch origin +refs/heads/${remoteBranch}:refs/remotes/origin/${remoteBranch}
-            hatch run diff-cover coverage.xml --compare-branch=${normalizedBaseBranch} --fail-under=${threshold}
+            git fetch origin ${shellQuote(`+refs/heads/${remoteBranch}:refs/remotes/origin/${remoteBranch}`)}
+            hatch run diff-cover coverage.xml ${shellQuote(`--compare-branch=${normalizedBaseBranch}`)} --fail-under=${threshold}
       - run:
           name: Scan Python source
           command: hatch run semgrep scan --config p/python --error --strict

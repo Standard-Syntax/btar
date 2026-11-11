@@ -16,6 +16,9 @@ const PYTHON_REPOS: PreCommitRepo[] = [
 
 export function getHooksForLanguage(): PreCommitRepo[] { return PYTHON_REPOS; }
 
-export function generatePreCommitConfig(_languages: DetectedLanguage[]): string {
-  return yaml.stringify({ repos: PYTHON_REPOS }, { indent: 2, lineWidth: 120, defaultStringType: "QUOTE_DOUBLE", defaultKeyType: "PLAIN" });
+export function generatePreCommitConfig(languages: DetectedLanguage[]): string {
+  // A root hook runs from the repository root and needs the project's Hatch environment.
+  const hasRootHatch = languages.some((project) => project.projectPath === "." && project.buildSystem === "hatch");
+  const repos = hasRootHatch ? PYTHON_REPOS : PYTHON_REPOS.filter((repo) => repo.repo !== "local");
+  return yaml.stringify({ repos }, { indent: 2, lineWidth: 120, defaultStringType: "QUOTE_DOUBLE", defaultKeyType: "PLAIN" });
 }

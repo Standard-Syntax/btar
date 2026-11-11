@@ -8,7 +8,7 @@
     "btar": "dist/cli.js"
   },
   "scripts": {
-    "build": "bun build src/cli.ts src/index.ts --outdir dist --target bun --packages external && tsc --emitDeclarationOnly && chmod +x dist/cli.js",
+    "build": "bun build src/cli.ts src/index.ts --outdir dist --target bun --packages external && tsc --emitDeclarationOnly && bun scripts/make-cli-executable.ts",
     "clean": "rm -rf dist",
     "dev": "bun --watch src/cli.ts",
     "test": "bun --bun run vitest run",
