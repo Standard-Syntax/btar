@@ -1,0 +1,43 @@
+src/cli.ts
+  s_dfc2c439d3375e::t_418714f93681d9 73-80
+src/commands/analyze.ts
+  s_dfc2c439d3375e::t_418714f93681d9 88,116,139,164-165,177-183,241-242,246
+src/core/detector.test.ts
+  s_dfc2c439d3375e::t_418714f93681d9 51,65,72,94-100
+  s_dfc2c439d3375e::t_4e55748e576400 101-102
+src/core/detector.ts
+  s_dfc2c439d3375e::t_418714f93681d9 27,36,45,49-53,55-56,59,61
+src/core/metrics/index.test.ts
+  s_dfc2c439d3375e::t_418714f93681d9 55
+src/commands/context.ts
+  s_dfc2c439d3375e::t_418714f93681d9 212
+docs/USER-GUIDE.md
+  s_dfc2c439d3375e::t_9f3c0533fdabe0 63,118
+src/cli.test.ts
+  s_dfc2c439d3375e::t_418714f93681d9 43-78,185-203,228-230,239
+src/core/context/claude-hooks.test.ts
+  s_dfc2c439d3375e::t_418714f93681d9 2-3,12,28,37,42-53
+  s_dfc2c439d3375e::t_e083db75643fe0 54-55
+.audit/review-repairs.md
+  s_dfc2c439d3375e::t_418714f93681d9 34
+docs/runtime.md
+  s_dfc2c439d3375e::t_418714f93681d9 15-17,20-21,28,37-38,45
+src/core/context/claude-hooks.ts
+  s_dfc2c439d3375e::t_418714f93681d9 25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5e67c749321bd294819139aa76013c62917a2b23",
+  "prompts": {},
+  "sessions": {
+    "s_dfc2c439d3375e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cc4f-2841-7ca2-8351-47314a9a3189",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Derek Vitrano <derek.vitrano@gmail.com>"
+    }
+  }
+}
