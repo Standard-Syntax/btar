@@ -1,0 +1,26 @@
+src/core/remediation/ratchet.test.ts
+  s_c8f412ab765fbd::t_3ca8510db6bb07 52,76,79,82,86,89,99,123,136
+  s_c8f412ab765fbd::t_813cfe971fc3ba 57,199,262,282,296,310
+  s_c8f412ab765fbd::t_764256379d4268 103-118,140-146
+  s_c8f412ab765fbd::t_f03fff3f3537ea 100,119-122,124-135,137-139
+  s_c8f412ab765fbd::t_a6bf1413b90cef 101-102
+src/core/remediation/ratchet.ts
+  s_c8f412ab765fbd::t_3ca8510db6bb07 47,89,102,105,109
+  s_c8f412ab765fbd::t_813cfe971fc3ba 11,23-25,46,48,50-52,54-56,58-68,71-87,90-91,93-100,104,106-108,110-113,116-117,119-121,126-127
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "87892cc91382569f791041318c233762fbe1897d",
+  "prompts": {},
+  "sessions": {
+    "s_c8f412ab765fbd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1caff-ef88-7872-98e4-2238c8c20012",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Derek Vitrano <derek.vitrano@gmail.com>"
+    }
+  }
+}
