@@ -1,0 +1,37 @@
+docs/runtime.md
+  s_dfc2c439d3375e::t_0d02c577d6aa1b 32,39
+src/cli.test.ts
+  s_dfc2c439d3375e::t_09a95683fe8256 132-143
+README.md
+  s_dfc2c439d3375e::t_0d02c577d6aa1b 54,67-69
+docs/USER-GUIDE.md
+  s_dfc2c439d3375e::t_0d02c577d6aa1b 90,99-101
+src/commands/init-ci.test.ts
+  s_dfc2c439d3375e::t_8141748930608f 127
+  s_dfc2c439d3375e::t_09a95683fe8256 103-114,116-120,131-133,135,138-139,143-144,146-150
+  s_dfc2c439d3375e::t_d75e3c4f326df1 115,121-126,128-130,134,136-137,140-142,145
+src/commands/context.ts
+  s_dfc2c439d3375e::t_9bd926b3cde770 237-238
+  s_dfc2c439d3375e::t_8b4d2f9e606118 225-226
+src/commands/init-ci.ts
+  s_dfc2c439d3375e::t_85d39ecb41862f 103
+  s_dfc2c439d3375e::t_9bd926b3cde770 84,86-97,109-110,127,129
+docs/architecture/python314-circleci.md
+  s_dfc2c439d3375e::t_0d02c577d6aa1b 25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "29bfd37a332b9ae57d729403be5800a25355acbe",
+  "prompts": {},
+  "sessions": {
+    "s_dfc2c439d3375e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cc4f-2841-7ca2-8351-47314a9a3189",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Derek Vitrano <derek.vitrano@gmail.com>"
+    }
+  }
+}
