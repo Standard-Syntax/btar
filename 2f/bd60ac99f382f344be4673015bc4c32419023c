@@ -1,0 +1,32 @@
+src/core/metrics/index.ts
+  s_c8f412ab765fbd::t_4b8d56941275aa 6-7,31-32,49-51,64-67,78-79,94-96,99-127,131-132,136-137,142-143,148-149
+  s_c8f412ab765fbd::t_fdad610fba2327 128-130
+src/core/detector.ts
+  s_c8f412ab765fbd::t_4b8d56941275aa 27,30,34,36-37,44-63
+src/core/scoring.test.ts
+  s_c8f412ab765fbd::t_4b8d56941275aa 25
+src/core/metrics/index.test.ts
+  s_c8f412ab765fbd::t_d363f9648d881d 1-119
+src/core/types.ts
+  s_c8f412ab765fbd::t_4b8d56941275aa 7
+src/core/detector.test.ts
+  s_c8f412ab765fbd::t_ac0893f0b20a77 17,29,44,49,51-85
+src/core/metrics/types.ts
+  s_c8f412ab765fbd::t_e2cf02a24affbe 25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2fbd60ac99f382f344be4673015bc4c32419023c",
+  "prompts": {},
+  "sessions": {
+    "s_c8f412ab765fbd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1caff-ef88-7872-98e4-2238c8c20012",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Derek Vitrano <derek.vitrano@gmail.com>"
+    }
+  }
+}
