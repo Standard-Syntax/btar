@@ -60,7 +60,7 @@ Install the official Gitleaks binary for local secret scans. The generated Circl
 
 ## Allow project execution
 
-Use `--trust-project` only for repositories whose Hatch configuration, dependencies, and tests you trust to execute with your privileges. Analysis and fixes require that flag on each invocation. Detection alone does not execute project code. Generated Claude hooks explicitly opt into execution and belong only in trusted repositories.
+Use `--trust-project` only for repositories whose Hatch configuration, dependencies, and tests you trust to execute with your privileges. Analysis and fixes require that flag on each invocation. Detection alone does not execute project code. Generated Claude post-edit hooks omit `--trust-project`. Review the command and add the flag only for a trusted repository. Generated pre-edit hooks invoke Hatch directly and require separate review before enabling.
 
 ## Analyze the repository
 
@@ -115,4 +115,4 @@ bun run lint
 bun run test
 ```
 
-The target profile supports Python only. BTAR detects directories containing `pyproject.toml`, `hatch.toml`, or `setup.py` at high confidence. It detects `requirements.txt`, `Pipfile`, or `setup.cfg` at medium confidence. Marker detection uses filenames without validating their contents. A directory with a direct `.py` file also qualifies at medium confidence when it is outside an already detected project. Detection is recursive. Nested directories with explicit markers remain separate projects, while standalone files inside a detected project do not create additional projects. A repository with neither a marker nor a qualifying `.py` file produces no supported-project result.
+The target profile supports Python only. BTAR detects directories containing `pyproject.toml`, `hatch.toml`, or `setup.py` at high confidence. It detects `requirements.txt`, `Pipfile`, or `setup.cfg` at medium confidence. Marker detection uses filenames without validating their contents. A directory with a direct `.py` file also qualifies at medium confidence when it is outside an already detected project. Detection searches recursively until it finds a project, then stops descending into that project. Nested markers and scripts within it do not create additional projects. Sibling projects outside it remain separately detectable. A repository with neither a marker nor a qualifying `.py` file produces no supported-project result.

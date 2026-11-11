@@ -40,6 +40,42 @@ describe("local Bun CLI", () => {
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("Python 3.14+");
   });
+  it("enforces the minimum Bun version at the CLI entry point", () => {
+    const root = mkdtempSync(join(process.cwd(), ".btar-cli-test-"));
+    roots.push(root);
+    const bundled = join(root, "cli.js");
+    for (const [version, expected] of [["1.4.3", 1], ["1.4.4", 0], ["1.5.0", 0], ["2.0.0", 0], ["1.4.4-canary.1", 1]] as const) {
+      const build = spawnSync(bun, ["build", cli, "--target", "bun", "--packages", "external", "--define", `Bun.version=${JSON.stringify(version)}`, "--outfile", bundled], { encoding: "utf8" });
+      expect(build.status, version).toBe(0);
+      const result = spawnSync(bun, [bundled, "--help"], { encoding: "utf8" });
+      expect(result.status, version).toBe(expected);
+      expect(expected === 0 ? result.stdout : result.stderr).toContain(expected === 0 ? "Usage: btar" : "requires Bun 1.4.4");
+    }
+  });
+  it("explains an empty project without suggesting Python tools", () => {
+    const root = repository(false);
+    const result = run(["analyze", ".", "--trust-project"], root);
+    const output = String(result.stdout) + String(result.stderr);
+    expect(result.status).toBe(1);
+    expect(output).toContain("verification incomplete: no Python code detected");
+    expect(output).not.toContain("Found:");
+    expect(output).not.toContain("Metrics:");
+    expect(output).not.toContain("Summary:");
+    expect(output).not.toContain("pytest-cov");
+    const json = run(["analyze", ".", "--trust-project", "--json"], root);
+    expect(json.status).toBe(1);
+    expect(JSON.parse(String(json.stdout)).recommendations).toEqual([]);
+    expect(String(json.stderr)).toContain("no Python code detected");
+  });
+  it.each([[[]], [["--json"]]])("reports an invalid baseline alongside incomplete measurements %j", (format) => {
+    const root = repository();
+    writeFileSync(join(root, ".btar-score"), "{}");
+    const result = run(["analyze", ".", "--trust-project", "--ratchet", ...format], root, { ...process.env, PATH: "" });
+    const output = String(result.stdout) + String(result.stderr);
+    expect(result.status).toBe(1);
+    expect(output).toContain("verification incomplete");
+    expect(output).toContain("baseline is incompatible or invalid");
+  });
   it("reports unavailable Python measurements as failed JSON", () => {
     const result = run(["analyze", ".", "--trust-project", "--json"], repository(), { ...process.env, PATH: "" });
     expect(result.status).toBe(1);
@@ -146,6 +182,25 @@ describe("local Bun CLI", () => {
     expect(run(["context", "generate", "agents-md", root], tmpdir()).status).toBe(0);
     expect(readFileSync(join(root, "AGENTS.md"), "utf8")).toContain("hatch run pyrefly check");
   });
+  it("explains consent for generated post-tool analysis", () => {
+    const root = repository();
+    const result = run(["context", "generate", "hooks", root], tmpdir());
+    expect(result.status).toBe(0);
+    expect(String(result.stdout)).toContain("Post-tool analysis requires consent");
+    expect(String(result.stdout)).toContain("--trust-project");
+    expect(String(result.stdout)).toContain("executing project code through Hatch");
+    const settings = JSON.parse(readFileSync(join(root, ".claude", "settings.json"), "utf8"));
+    const command = settings.hooks.PostToolUse[0].hooks[0].command;
+    expect(command).toContain("btar analyze");
+    expect(command).not.toContain("--trust-project");
+
+    const noPostRoot = repository();
+    const noPost = run(["context", "generate", "hooks", noPostRoot, "--no-post"], tmpdir());
+    expect(noPost.status).toBe(0);
+    expect(String(noPost.stdout)).not.toContain("Post-tool analysis");
+    const noPostSettings = JSON.parse(readFileSync(join(noPostRoot, ".claude", "settings.json"), "utf8"));
+    expect(noPostSettings.hooks.PostToolUse).toBeUndefined();
+  });
   it("generates CircleCI for a separate repository and comparison branch", () => {
     const root = repository();
     writeFileSync(join(root, "pyproject.toml"), generatePythonToolchainConfig());
@@ -170,7 +225,9 @@ describe("local Bun CLI", () => {
     expect(run(["analyze", ".", "--trust-project", "--json", "--fail-under", "80"], root, env).status).toBe(0);
   });
   it("rejects legacy and changed-scope baselines until deliberately replaced", () => {
-    const root = repository();
+    const root = repository(false);
+    mkdirSync(join(root, "packages", "first"), {recursive:true});
+    writeFileSync(join(root, "packages", "first", "hatch.toml"), "[envs.default]\n");
     successfulHatch(root);
     const env = { ...process.env, PATH: root };
     writeFileSync(join(root, ".btar-score"), JSON.stringify({score:100,timestamp:new Date().toISOString(),breakdown:{typeStrictness:30,lintErrors:30,coverage:40}}));
@@ -179,7 +236,7 @@ describe("local Bun CLI", () => {
     expect(JSON.parse(String(legacy.stdout)).gateResult).toBe("failed");
     expect(String(legacy.stderr)).toContain("--save-baseline");
     expect(run(["analyze", ".", "--trust-project", "--json", "--save-baseline"], root, env).status).toBe(0);
-    expect(JSON.parse(readFileSync(join(root, ".btar-score"), "utf8"))).toMatchObject({schemaVersion:1,projectPaths:["."]});
+    expect(JSON.parse(readFileSync(join(root, ".btar-score"), "utf8"))).toMatchObject({schemaVersion:1,projectPaths:["packages/first"]});
     expect(run(["analyze", ".", "--trust-project", "--json", "--ratchet"], root, env).status).toBe(0);
     mkdirSync(join(root, "packages", "other"), {recursive:true});
     writeFileSync(join(root, "packages", "other", "hatch.toml"), "[envs.default]\n");

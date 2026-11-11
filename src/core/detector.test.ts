@@ -48,7 +48,7 @@ describe("Python detection", () => {
     writeFileSync(join(packageDirectory, "pyproject.toml"), "[tool.hatch.envs.default]\n");
     await expect(detectLanguages(root, config)).resolves.toEqual([{ language: "python", projectPath: "package", confidence: "high", markers: ["package/pyproject.toml"], buildSystem: "hatch" }]);
   });
-  it("discovers every deeply nested project despite a root Python script", async () => {
+  it("uses the outermost project when a root Python script contains nested projects", async () => {
     const root = directory();
     writeFileSync(join(root, "script.py"), "pass\n");
     for (const name of ["packages/first", "packages/second"]) {
@@ -59,19 +59,17 @@ describe("Python detection", () => {
     const projects = await detectLanguages(root, config);
     expect(projects.map(({ projectPath, buildSystem }) => ({ projectPath, buildSystem }))).toEqual([
       { projectPath: ".", buildSystem: "legacy-python" },
-      { projectPath: "packages/first", buildSystem: "hatch" },
-      { projectPath: "packages/second", buildSystem: "hatch" },
     ]);
   });
 
-  it("finds nested metadata inside a root project without treating source folders as projects", async () => {
+  it("does not detect nested metadata inside a root project", async () => {
     const root = directory();
     writeFileSync(join(root, "pyproject.toml"), "[tool.hatch.envs.default]\n");
     mkdirSync(join(root, "src"));
     writeFileSync(join(root, "src", "example.py"), "pass\n");
     mkdirSync(join(root, "packages", "nested"), { recursive: true });
     writeFileSync(join(root, "packages", "nested", "pyproject.toml"), "[project]\nname = 'nested'\n");
-    expect((await detectLanguages(root, config)).map((project) => project.projectPath)).toEqual([".", "packages/nested"]);
+    expect((await detectLanguages(root, config)).map((project) => project.projectPath)).toEqual(["."]);
   });
 
   it("excludes hidden and visible nested projects with a universal glob", async () => {
@@ -91,6 +89,15 @@ describe("Python detection", () => {
       writeFileSync(join(root, name, "pyproject.toml"), "[tool.hatch.envs.default]\n");
     }
     expect((await detectLanguages(root, { ...config, exclude: ["packages/skip/**"] })).map((project) => project.projectPath)).toEqual(["packages/keep"]);
+  });
+
+  it("ignores Python environments and caches while finding sibling projects", async () => {
+    const root = directory();
+    for (const name of ["venv", ".tox", ".nox", ".pytest_cache", ".mypy_cache", ".ruff_cache", "__pycache__", "packages/one", "packages/two"]) {
+      mkdirSync(join(root, name), { recursive: true });
+      writeFileSync(join(root, name, "pyproject.toml"), "[project]\n");
+    }
+    expect((await detectLanguages(root, config)).map((project) => project.projectPath)).toEqual(["packages/one", "packages/two"]);
   });
 
 });

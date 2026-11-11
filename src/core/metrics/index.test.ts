@@ -52,7 +52,7 @@ if (args[1] === "pyrefly") {
   };
 }
 
-describe("project metric orchestration", () => {
+describe.skipIf(process.platform === "win32")("project metric orchestration with a POSIX Hatch fixture", () => {
   it("does not execute Hatch or any metric without explicit consent", async () => {
     const environment = fixture();
     const report = await runAllMetrics({ directory: environment.root, languages: [environment.project(".")] });

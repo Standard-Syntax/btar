@@ -24,7 +24,7 @@ export function detectBuildSystem(directory: string): BuildSystem {
   } catch { return "legacy-python"; }
 }
 
-function detectInDirectory(directory: string, root: string, config: BTARConfig, allowScripts: boolean): DetectedLanguage | undefined {
+function detectInDirectory(directory: string, root: string, config: BTARConfig): DetectedLanguage | undefined {
   let files: string[];
   try { files = readdirSync(directory, { withFileTypes: true }).filter((entry) => entry.isFile()).map((entry) => entry.name); } catch { return undefined; }
   const projectPath = relative(root, directory).split("\\").join("/") || ".";
@@ -33,7 +33,7 @@ function detectInDirectory(directory: string, root: string, config: BTARConfig, 
     const marker = markers.find((file) => files.includes(file) && !shouldExclude(join(directory, file), root, config.exclude));
     if (marker) return { language: "python", projectPath, confidence, markers: [relative(root, join(directory, marker))], buildSystem: detectBuildSystem(directory) };
   }
-  if (allowScripts && files.some((file) => file.endsWith(".py") && !shouldExclude(join(directory, file), root, config.exclude))) {
+  if (files.some((file) => file.endsWith(".py") && !shouldExclude(join(directory, file), root, config.exclude))) {
     return { language: "python", projectPath, confidence: "medium", markers: [relative(root, directory) || "."], buildSystem: detectBuildSystem(directory) };
   }
   return undefined;
@@ -42,20 +42,23 @@ function detectInDirectory(directory: string, root: string, config: BTARConfig, 
 export async function detectLanguages(directory: string, config: BTARConfig): Promise<DetectedLanguage[]> {
   if (!existsSync(directory)) return [];
   const projects: DetectedLanguage[] = [];
-  const pending = [{ directory, insideProject: false }];
+  const pending = [directory];
   while (pending.length > 0) {
     const current = pending.pop();
     if (!current) break;
-    const detected = detectInDirectory(current.directory, directory, config, !current.insideProject);
-    if (detected) projects.push(detected);
+    const detected = detectInDirectory(current, directory, config);
+    if (detected) {
+      projects.push(detected);
+      continue;
+    }
     try {
-      const children = readdirSync(current.directory, { withFileTypes: true })
-        .filter((entry) => entry.isDirectory() && ![".git", ".venv", "__pycache__", "build", "dist", "node_modules", "vendor"].includes(entry.name))
+      const children = readdirSync(current, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory() && ![".git", ".venv", "venv", ".tox", ".nox", ".pytest_cache", ".mypy_cache", ".ruff_cache", "__pycache__", "build", "dist", "node_modules", "vendor"].includes(entry.name))
         .sort((a, b) => b.name.localeCompare(a.name));
       for (const entry of children) {
-        const child = join(current.directory, entry.name);
+        const child = join(current, entry.name);
         if (!shouldExclude(child, directory, config.exclude)) {
-          pending.push({ directory: child, insideProject: current.insideProject || detected !== undefined });
+          pending.push(child);
         }
       }
     } catch { continue; }

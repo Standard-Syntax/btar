@@ -31,7 +31,7 @@ The owner requested a Python-only Python 3.14+ target and a Bun runtime. This re
 
 - PASS. Typecheck, lint, build, and all 149 tests.
 - PASS. Real Python 3.14.7 integration through the built Bun CLI, including Hypothesis, pytest-cov, diff-cover, and Semgrep.
-- PASS. Generated CircleCI configuration validates locally.
+- The recorded evidence does not establish CircleCI semantic validation of generated target configuration. Tests parsed the generated configuration and checked its scanner jobs. CircleCI semantic validation of that generated configuration is NOT_RUN in the recorded evidence.
 - Measured implementation statement coverage is 49.96 percent. CLI subprocess runs are separate from unit instrumentation.
 - An independent reviewer reproduced the parent-exits-first cleanup defect. The added regression failed before the correction and passed afterward.
 - Windows process-tree cleanup is NOT_RUN. A deliberately escaped process may survive group cleanup; explicit consent is not a sandbox.
