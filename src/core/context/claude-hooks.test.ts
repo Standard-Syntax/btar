@@ -9,7 +9,7 @@ describe("Python Claude hooks", () => {
   it("generates Hatch checks and local btar analysis", () => {
     const config = generateClaudeHooks({ projectPath: "." });
     expect(config.hooks.PreToolUse?.[0].hooks[0].command).toBe("cd -- '.' && hatch run pyrefly check");
-    expect(config.hooks.PostToolUse?.[0].hooks[0].command).toBe("btar analyze '.' --json");
+    expect(config.hooks.PostToolUse?.[0].hooks[0].command).toBe("btar analyze '.' --json --trust-project");
     expect(JSON.parse(formatAsSettingsJson(config))).toEqual(config);
   });
   it("can disable hooks and retain explicit custom commands", () => {
@@ -25,7 +25,7 @@ describe("Python Claude hooks", () => {
       const command = generateClaudeHooks({ projectPath: target }).hooks.PostToolUse![0].hooks[0].command;
       const result = spawnSync("/bin/sh", ["-c", command], { cwd: directory, env: { ...process.env, PATH: directory } });
       expect(result.status).toBe(0);
-      expect(readFileSync(join(directory, "args.txt"), "utf8").split("\n")).toEqual(["analyze", target, "--json", ""]);
+      expect(readFileSync(join(directory, "args.txt"), "utf8").split("\n")).toEqual(["analyze", target, "--json", "--trust-project", ""]);
     } finally { rmSync(directory, { recursive: true, force: true }); }
   });
 });

@@ -22,6 +22,7 @@ export interface MetricResult {
   value: number;
   /** Whether the tool executed successfully */
   success: boolean;
+  diagnostic?: "consent-required" | "unsupported-python" | "runtime-unavailable" | "tool-failed" | "timeout" | "invalid-report";
   /** Raw tool output for debugging (optional) */
   raw?: string;
 }

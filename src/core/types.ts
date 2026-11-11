@@ -4,6 +4,7 @@ export type BuildSystem = "hatch" | "legacy-python";
 
 export interface DetectedLanguage {
   language: "python";
+  projectPath: string;
   confidence: "high" | "medium";
   markers: string[];
   buildSystem: BuildSystem;

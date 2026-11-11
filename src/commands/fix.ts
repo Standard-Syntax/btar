@@ -9,13 +9,13 @@ import { loadConfig } from "../core/config.js";
 import { detectLanguages } from "../core/detector.js";
 import { createProgressReporter } from "../core/progress.js";
 import { runFix, type FixResult } from "../core/remediation/fixer.js";
-import type { SupportedLanguage } from "../core/types.js";
 
 /**
  * Options for fix command
  */
 export interface FixOptions {
   quiet?: boolean;
+  trustProject?: boolean;
   language?: string;
 }
 
@@ -30,6 +30,11 @@ export async function fixCommand(
 ): Promise<void> {
   const progress = createProgressReporter({ quiet: options.quiet });
   try {
+    if (options.trustProject !== true) {
+      progress.error("Project execution requires --trust-project. Hatch configuration can execute code with your privileges.");
+      process.exitCode = 1;
+      return;
+    }
     const resolvedDir = resolve(directory);
 
     // Validate directory exists
@@ -68,24 +73,24 @@ export async function fixCommand(
     progress.success(`Found: ${languageNames}`);
 
     // Run fix for each language
-    const results = new Map<SupportedLanguage, FixResult>();
+    const results = new Map<string, FixResult>();
     let hasFailures = false;
 
     for (const lang of languages) {
-      progress.info(`Fixing ${lang.language}...`);
+      progress.info(`Fixing ${lang.projectPath}...`);
 
-      const result = await runFix(lang.language, resolvedDir);
-      results.set(lang.language, result);
+      const result = await runFix(lang.language, resolve(resolvedDir, lang.projectPath));
+      results.set(lang.projectPath, result);
 
       if (result.success) {
         const fileInfo =
           result.filesModified >= 0
             ? ` (${result.filesModified} files)`
             : "";
-        progress.success(`${lang.language}: ${result.message}${fileInfo}`);
+        progress.success(`${lang.projectPath}: ${result.message}${fileInfo}`);
       } else {
         hasFailures = true;
-        progress.error(`${lang.language}: ${result.message}`);
+        progress.error(`${lang.projectPath}: Ruff fix failed. Run Ruff directly in the trusted project for details.`);
       }
     }
 
@@ -95,7 +100,7 @@ export async function fixCommand(
       .length;
     const totalCount = results.size;
 
-    progress.summary("Languages fixed", `${successCount}/${totalCount}`);
+    progress.summary("Projects fixed", `${successCount}/${totalCount}`);
 
     if (hasFailures) {
       progress.error("Some fix operations failed");

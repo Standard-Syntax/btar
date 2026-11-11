@@ -31,6 +31,7 @@ program
   .option("-q, --quiet", "Suppress progress output")
   .option("-c, --config <path>", "Path to config file")
   .option("-j, --json", "Output results as JSON")
+  .option("--trust-project", "Allow project-controlled Hatch configuration and tests to execute with your privileges")
   .option(
     "--fail-under <score>",
     "Exit non-zero if score below threshold",
@@ -64,11 +65,15 @@ program
   .description("Auto-fix lint issues in the codebase")
   .option("-q, --quiet", "Suppress progress output")
   .option("-l, --language <lang>", "Fix only specific language")
+  .option("--trust-project", "Allow project-controlled Hatch configuration to execute with your privileges")
   .action(async (directory, options) => {
     await fixCommand(directory, options);
   });
 
-program.parseAsync(process.argv).catch((error) => {
+if (typeof Bun === "undefined") {
+  console.error("btar requires Bun 1.4.4 or newer. Run bun dist/cli.js or use the Bun-linked btar command.");
+  process.exitCode = 1;
+} else program.parseAsync(process.argv).catch((error) => {
   console.error("Error:", error.message);
   process.exitCode = 1;
 });

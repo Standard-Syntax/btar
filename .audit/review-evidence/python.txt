@@ -1,0 +1,38 @@
+$ bun run build && bun scripts/verify-python.ts
+$ bun build src/cli.ts src/index.ts --outdir dist --target bun --packages external && tsc --emitDeclarationOnly && chmod +x dist/cli.js
+Bundled 26 modules in 4ms
+
+  cli.js    58.54 KB  (entry point)
+  index.js  69 bytes  (entry point)
+
+Creating environment: default
+Checking dependencies
+Syncing dependencies
+
+
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 4 files tracked by git with 151 Code rules:
+  Scanning 1 file with 151 python rules.
+
+
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 0 (0 blocking)
+ • Rules run: 151
+ • Targets scanned: 1
+ • Parsed lines: ~100.0%
+ • Scan skipped:
+   ◦ Files matching .semgrepignore patterns: 2
+ • Scan was limited to files tracked by git
+ • For a detailed list of skipped files and lines, run semgrep with the --verbose flag
+Ran 151 rules on 1 file: 0 findings.
+(need more rules? `semgrep login` for additional free Semgrep Registry rules)
+
+If Semgrep missed a finding, please send us feedback to let us know!
+See https://semgrep.dev/docs/reporting-false-negatives/
+Python 3.14.7
+Verified the built Bun CLI, Hypothesis tests, changed-line coverage, and Semgrep Python scan.

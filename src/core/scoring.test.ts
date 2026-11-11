@@ -22,6 +22,7 @@ function createReport(options: {
 
   const lang: DetectedLanguage = {
     language: "python",
+    projectPath: ".",
     confidence: "high",
     markers: ["pyproject.toml"],
           buildSystem: "hatch",

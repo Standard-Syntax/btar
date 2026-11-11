@@ -140,6 +140,9 @@ function hasCoverageData(report: MetricsReport): boolean {
  * ```
  */
 export function calculateScore(report: MetricsReport): ScoreResult {
+  if (report.languages.length === 0) {
+    return { score: 0, breakdown: { typeStrictness: 0, lintErrors: 0, coverage: 0 }, interpretation: "poor" };
+  }
   const { summary } = report;
 
   // Calculate dimension points

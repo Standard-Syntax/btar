@@ -11,5 +11,7 @@ describe("generatePreCommitConfig", () => {
     expect(repositories).toContain("gitleaks");
     expect(repositories).toContain("semgrep");
     expect(repositories).not.toContain("eslint");
+    const hooks = config.repos.flatMap((repo: { hooks: { id: string }[] }) => repo.hooks.map((hook) => hook.id));
+    expect(hooks).toEqual(expect.arrayContaining(["ruff-check", "ruff-format", "pyrefly", "gitleaks", "semgrep"]));
   });
 });
