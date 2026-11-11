@@ -1,0 +1,40 @@
+$ bun --bun run vitest run src/core/metrics/runner.test.ts
+
+ RUN  v3.2.4 /home/dscv/Repo/btar
+
+ ❯ src/core/metrics/runner.test.ts (4 tests | 1 failed) 1872ms
+   ✓ runTool > captures output and exit status 9ms
+   ✓ runTool > times out a child and its pipe-holding descendant  852ms
+   × runTool > terminates descendants after their Hatch-shaped parent exits 857ms
+     → expected true to be false // Object.is equality
+   ✓ runTool > settles even when a descendant escapes the process group 152ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/core/metrics/runner.test.ts > runTool > terminates descendants after their Hatch-shaped parent exits
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/core/metrics/runner.test.ts:33:34
+     31|       expect(await runTool({command:[process.execPath, "-e", script], …
+     32|       await new Promise(resolve => setTimeout(resolve,700));
+     33|       expect(existsSync(marker)).toBe(false);
+       |                                  ^
+     34|     } finally { rmSync(root,{recursive:true,force:true}); }
+     35|   },5000);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 passed (4)
+   Start at  12:58:48
+   Duration  2.03s (transform 30ms, setup 0ms, collect 24ms, tests 1.87s, environment 0ms, prepare 31ms)
+
+error: "vitest" exited with code 1
+error: script "test" exited with code 1

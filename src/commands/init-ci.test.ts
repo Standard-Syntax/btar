@@ -11,6 +11,10 @@ describe("generateCircleCiConfig", () => {
     expect(config.jobs.quality.docker[0].image).toBe("cimg/python:3.14");
     expect(source).toContain("hatch run ruff check .");
     expect(source).toContain("hatch run pyrefly check");
+    const commands = config.jobs.quality.steps.filter((step: unknown) => step !== null && typeof step === "object" && "run" in step).map((step: {run:{command:string}}) => step.run.command);
+    const versionIndex = commands.findIndex((command: string) => command.includes("sys.version_info < (3, 14)"));
+    expect(versionIndex).toBeGreaterThanOrEqual(0);
+    expect(versionIndex).toBeLessThan(commands.findIndex((command: string) => command.includes("ruff check")));
     expect(source).toContain("hatch run pytest --cov");
     expect(source).toContain("hatch run diff-cover coverage.xml --compare-branch=origin/main --fail-under=80");
     expect(source).toContain("git fetch origin +refs/heads/main:refs/remotes/origin/main");

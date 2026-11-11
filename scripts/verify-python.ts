@@ -29,7 +29,7 @@ def test_double(value: int) -> None:
   const version = await run(["hatch", "run", "python", "--version"]);
   if (!/Python 3\.(?:14|1[5-9]|[2-9]\d)\./.test(version)) throw new Error(`Unexpected interpreter ${version}`);
   await run(["hatch", "run", "ruff", "format", "."]);
-  const output = await run([process.execPath, cli, "analyze", ".", "--json", "--fail-under", "100"]);
+  const output = await run([process.execPath, cli, "analyze", ".", "--trust-project", "--json", "--fail-under", "100"]);
   const report = JSON.parse(output);
   if (report.score !== 100) throw new Error(`Expected score 100, received ${output}`);
   await run(["git", "init", "--quiet"]);

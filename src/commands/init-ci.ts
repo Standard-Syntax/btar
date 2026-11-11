@@ -32,6 +32,9 @@ jobs:
           name: Install Hatch
           command: python -m pip install --upgrade hatch
       - run:
+          name: Verify Hatch Python version
+          command: hatch run python -c "import sys; raise SystemExit(sys.version_info < (3, 14))"
+      - run:
           name: Lint
           command: hatch run ruff check . && hatch run ruff format --check .
       - run:
@@ -72,7 +75,7 @@ workflows:
 `;
 }
 
-const REQUIRED_TOOLS = ["ruff", "pyrefly", "pytest", "pytest-cov", "diff-cover", "semgrep"];
+const REQUIRED_TOOLS = ["ruff", "pyrefly", "pytest", "pytest-cov", "hypothesis", "diff-cover", "semgrep"];
 
 function hatchDependencies(path: string): string[] {
   try {

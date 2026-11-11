@@ -10,7 +10,7 @@ import { detectLanguages } from "../core/detector.js";
 import { createProgressReporter } from "../core/progress.js";
 import { runAllMetrics } from "../core/metrics/index.js";
 import { calculateScore } from "../core/scoring.js";
-import { formatAsJson } from "../core/output.js";
+import { formatAsJson, safeMetricError } from "../core/output.js";
 import {
   generateRecommendations,
   loadRatchetScore,
@@ -24,6 +24,7 @@ import type { MetricResult } from "../core/metrics/types.js";
  */
 export interface AnalyzeOptions {
   quiet?: boolean;
+  trustProject?: boolean;
   config?: string;
   json?: boolean;
   failUnder?: number;
@@ -83,21 +84,7 @@ export async function analyzeCommand(
     // Detect languages
     const languages = await detectLanguages(resolvedDir, config);
 
-    if (languages.length === 0) {
-      if (options.json) {
-        console.log(
-          JSON.stringify(
-            { languages: [], metrics: {}, summary: {} },
-            null,
-            2
-          )
-        );
-      } else {
-        progress.info("No Python code detected");
-      }
-      process.exitCode = 1;
-      return;
-    }
+    if (languages.length === 0) progress.info("No Python code detected");
 
     const languageNames = languages.map((l) => l.language).join(", ");
     progress.success(`Found: ${languageNames}`);
@@ -106,6 +93,7 @@ export async function analyzeCommand(
     const report = await runAllMetrics({
       directory: resolvedDir,
       languages,
+      trustedProject: options.trustProject === true,
       onProgress: options.json
         ? undefined
         : (metric: string, status: string): void => {
@@ -116,11 +104,12 @@ export async function analyzeCommand(
     });
 
     // A missing measurement must not satisfy a CI gate.
-    const failedMeasurements = [
+    const measurements = [
       ...report.metrics.typeStrictness.values(),
       ...report.metrics.lintErrors.values(),
       ...report.metrics.coverage.values(),
-    ].filter((measurement) => !measurement.success);
+    ];
+    const failedMeasurements = measurements.filter((measurement) => !measurement.success);
 
     // Calculate score
     const scoreResult = calculateScore(report);
@@ -128,9 +117,10 @@ export async function analyzeCommand(
     // Generate recommendations
     const recommendations = generateRecommendations(scoreResult, report);
 
-    // Save baseline if requested
-    if (options.saveBaseline && failedMeasurements.length === 0) {
-      await saveRatchetScore(resolvedDir, scoreResult);
+    const projectPaths = languages.map((project) => project.projectPath);
+    const complete = languages.length > 0 && measurements.length === languages.length * 3 && failedMeasurements.length === 0;
+    if (options.saveBaseline && complete) {
+      await saveRatchetScore(resolvedDir, scoreResult, projectPaths);
       progress.success(`Baseline score ${scoreResult.score} saved to .btar-score`);
     }
 
@@ -138,11 +128,17 @@ export async function analyzeCommand(
     let ratchetFailure = false;
     let ratchetMessage = "";
     if (options.ratchet) {
-      const baseline = await loadRatchetScore(resolvedDir);
-      if (!baseline) {
+      let baseline;
+      try {
+        baseline = await loadRatchetScore(resolvedDir, projectPaths);
+      } catch {
+        ratchetFailure = true;
+        ratchetMessage = "Ratchet baseline is incompatible or invalid. Review the current Python scope and deliberately run --save-baseline to replace it.";
+      }
+      if (!baseline && !ratchetFailure) {
         ratchetFailure = true;
         ratchetMessage = "No baseline found. Run with --save-baseline first to enable ratchet mode.";
-      } else {
+      } else if (baseline) {
         const ratchetResult = checkRatchetRegression(scoreResult, baseline);
         if (!ratchetResult.passed) {
           ratchetFailure = true;
@@ -166,14 +162,15 @@ export async function analyzeCommand(
           ratchetFailure: options.ratchet ? ratchetFailure : undefined,
         })
       );
-      if (failedMeasurements.length > 0) {
-        console.error(`BTAR verification incomplete: ${failedMeasurements.map((m) => m.tool).join(", ")}`);
+      if (!complete) {
+        console.error(options.trustProject === true ? "BTAR verification incomplete." : "Project execution requires --trust-project. Hatch configuration and tests can execute code with your privileges.");
         process.exitCode = 1;
         return;
       }
       if (gateFailure || ratchetFailure) {
+        if (ratchetFailure) console.error(ratchetMessage);
         process.exitCode = 1;
-      return;
+        return;
       }
       return;
     }
@@ -234,10 +231,10 @@ export async function analyzeCommand(
     }
 
     // Quality gate enforcement
-    if (failedMeasurements.length > 0) {
+    if (!complete) {
       progress.error(`BTAR verification incomplete: ${failedMeasurements.map((m) => m.tool).join(", ")}`);
       for (const result of failedMeasurements) {
-        if (result.raw) progress.info(`${result.tool}: ${result.raw.slice(0, 1000)}`);
+        progress.info(`${result.tool}: ${safeMetricError(result)}`);
       }
       process.exitCode = 1;
       return;

@@ -16,6 +16,7 @@ export interface LanguageOutput {
   language: SupportedLanguage;
   confidence: "high" | "medium" | "low";
   markers: string[];
+  projectPath: string;
 }
 
 /**
@@ -95,11 +96,19 @@ export interface AnalysisOutput {
   recommendations: RecommendationOutput[];
 }
 
-/**
- * Convert Map<SupportedLanguage, MetricResult> to Record<string, MetricOutput>
- */
+export function safeMetricError(result: MetricResult): string {
+  switch (result.diagnostic) {
+    case "consent-required": return "Project execution requires --trust-project. Hatch configuration and tests can execute code with your privileges.";
+    case "unsupported-python": return "Python 3.14+ is required in the project's Hatch environment.";
+    case "runtime-unavailable": return "The Hatch Python runtime check failed. Verify Hatch and the project environment.";
+    case "timeout": return "The check exceeded its time limit.";
+    case "invalid-report": return "The check did not produce a valid report.";
+    default: return "The check failed. Run the tool directly in a trusted project to inspect its output.";
+  }
+}
+
 function mapToRecord(
-  map: Map<SupportedLanguage, MetricResult>
+  map: Map<string, MetricResult>
 ): Record<string, MetricOutput> {
   const record: Record<string, MetricOutput> = {};
   for (const [lang, result] of map) {
@@ -108,7 +117,7 @@ function mapToRecord(
       tool: result.tool,
       value: result.value,
       success: result.success,
-      ...(!result.success && result.raw ? { error: result.raw.slice(0, 1000) } : {}),
+      ...(!result.success ? { error: safeMetricError(result) } : {}),
     };
   }
   return record;
@@ -156,6 +165,7 @@ export function formatAsJson(
       language: l.language,
       confidence: l.confidence,
       markers: l.markers,
+      projectPath: l.projectPath,
     })),
     metrics: {
       typeStrictness: mapToRecord(report.metrics.typeStrictness),

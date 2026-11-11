@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve, join } from "node:path";
 import { spawnSync } from "node:child_process";
+import { generatePythonToolchainConfig } from "./core/context/python-toolchain.js";
 
 const roots: string[] = [];
 const cli = resolve("src/cli.ts");
@@ -12,6 +13,21 @@ function repository(python = true): string {
   roots.push(root);
   if (python) writeFileSync(join(root, "example.py"), "answer: int = 42\n");
   return root;
+}
+function successfulHatch(root: string): void {
+  writeFileSync(join(root, "hatch"), `#!${bun}
+import {writeFileSync,appendFileSync} from 'node:fs';
+const args=process.argv.slice(2);
+appendFileSync('invocations.jsonl',JSON.stringify(args)+'\\n');
+if(args[1]==='python') console.log('3.14.7');
+else if(args[1]==='pyrefly') console.log(JSON.stringify({errors:[]}));
+else if(args[1]==='ruff') console.log('[]');
+else if(args[1]==='pytest') {
+ const output=args.find(arg=>arg.startsWith('--cov-report=json:'));
+ if(!output) process.exit(2);
+ writeFileSync(output.slice('--cov-report=json:'.length),JSON.stringify({totals:{percent_covered:Number(process.env.BTAR_FAKE_COVERAGE??100)}}));
+} else process.exit(2);
+`, { mode: 0o755 });
 }
 function run(args: string[], cwd: string, env = process.env): ReturnType<typeof spawnSync> {
   return spawnSync(bun, [cli, ...args], { cwd, env, encoding: "utf8", timeout: 20_000 });
@@ -25,7 +41,7 @@ describe("local Bun CLI", () => {
     expect(result.stdout).toContain("Python 3.14+");
   });
   it("reports unavailable Python measurements as failed JSON", () => {
-    const result = run(["analyze", ".", "--json"], repository(), { ...process.env, PATH: "" });
+    const result = run(["analyze", ".", "--trust-project", "--json"], repository(), { ...process.env, PATH: "" });
     expect(result.status).toBe(1);
     const report = JSON.parse(String(result.stdout));
     expect(report.languages).toEqual([expect.objectContaining({ language: "python" })]);
@@ -33,28 +49,32 @@ describe("local Bun CLI", () => {
     expect(String(result.stderr)).toContain("incomplete");
   });
   it("does not satisfy a score gate without a Python project", () => {
-    const result = run(["analyze", ".", "--json", "--fail-under", "1"], repository(false));
+    const result = run(["analyze", ".", "--trust-project", "--json", "--fail-under", "1"], repository(false));
     expect(result.status).toBe(1);
-    expect(() => JSON.parse(String(result.stdout))).not.toThrow();
+    const report = JSON.parse(String(result.stdout));
+    expect(report).toMatchObject({ score: 0, gateResult: "failed", interpretation: "poor" });
+    expect(report.metrics).toEqual({ typeStrictness: {}, lintErrors: {}, coverage: {} });
+    expect(report.breakdown).toEqual({ typeStrictness: 0, lintErrors: 0, coverage: 0 });
+    expect(report.recommendations).toBeInstanceOf(Array);
   });
   it("rejects malformed thresholds before running tools", () => {
-    const result = run(["analyze", ".", "--fail-under", "70garbage"], repository());
+    const result = run(["analyze", ".", "--trust-project", "--fail-under", "70garbage"], repository());
     expect(result.status).toBe(1);
     expect(String(result.stderr)).toContain("integer between 0 and 100");
   });
   it("does not save a baseline from failed measurements", () => {
     const root = repository();
-    const result = run(["analyze", ".", "--json", "--save-baseline"], root, { ...process.env, PATH: "" });
+    const result = run(["analyze", ".", "--trust-project", "--json", "--save-baseline"], root, { ...process.env, PATH: "" });
     expect(result.status).toBe(1);
     expect(existsSync(join(root, ".btar-score"))).toBe(false);
   });
   it("marks the JSON gate failed when tools are unavailable", () => {
-    const result = run(["analyze", ".", "--json", "--fail-under", "0"], repository(), { ...process.env, PATH: "" });
+    const result = run(["analyze", ".", "--trust-project", "--json", "--fail-under", "0"], repository(), { ...process.env, PATH: "" });
     expect(result.status).toBe(1);
     expect(JSON.parse(String(result.stdout)).gateResult).toBe("failed");
   });
   it("rejects combining baseline replacement with regression checks", () => {
-    const result = run(["analyze", ".", "--ratchet", "--save-baseline"], repository());
+    const result = run(["analyze", ".", "--trust-project", "--ratchet", "--save-baseline"], repository());
     expect(result.status).toBe(1);
     expect(String(result.stderr)).toContain("separately");
   });
@@ -66,10 +86,29 @@ describe("local Bun CLI", () => {
   });
   it("rejects an older Hatch interpreter before measuring tools", () => {
     const root = repository();
-    writeFileSync(join(root, "hatch"), '#!/bin/sh\nprintf "3.13.0\\n"\nexit 1\n', { mode: 0o755 });
-    const result = run(["analyze", ".", "--json"], root, { ...process.env, PATH: root });
+    writeFileSync(join(root, "hatch"), '#!/bin/sh\nif [ "$2" = "python" ]; then printf "3.13.0\\n"; exit 0; fi\nprintf "measurement executed" > unexpected\nexit 2\n', { mode: 0o755 });
+    const result = run(["analyze", ".", "--trust-project", "--json"], root, { ...process.env, PATH: root });
     expect(result.status).toBe(1);
     expect(JSON.parse(String(result.stdout)).metrics.typeStrictness.python.error).toContain("Python 3.14+");
+    expect(existsSync(join(root, "unexpected"))).toBe(false);
+  });
+  it.each(["analyze", "fix"])("requires consent before %s can execute repository code", (command) => {
+    const root = repository();
+    writeFileSync(join(root, "hatch"), '#!/bin/sh\nprintf executed > invoked\nexit 2\n', { mode: 0o755 });
+    const result = run([command, "."], root, { ...process.env, PATH: root });
+    expect(result.status).toBe(1);
+    expect(existsSync(join(root, "invoked"))).toBe(false);
+    expect(String(result.stdout) + String(result.stderr)).toContain("--trust-project");
+  });
+  it("keeps credential-like subprocess output out of reports and terminal errors", () => {
+    const root = repository();
+    writeFileSync(join(root, "hatch"), '#!/bin/sh\nif [ "$2" = "python" ]; then printf "3.14.7\\n"; exit 0; fi\nprintf "%s" "$BTAR_TEST_SECRET" >&2\nexit 2\n', { mode: 0o755 });
+    const env = { ...process.env, PATH: root, BTAR_TEST_SECRET: "credential-sentinel-do-not-report" };
+    for (const args of [["analyze", ".", "--json"], ["analyze", "."], ["fix", "."]]) {
+      const result = run([...args, "--trust-project"], root, env);
+      expect(result.status).toBe(1);
+      expect(String(result.stdout) + String(result.stderr)).not.toContain(env.BTAR_TEST_SECRET);
+    }
   });
   it("preserves brownfield metadata and refuses to replace a merge candidate", () => {
     const root = repository();
@@ -89,12 +128,44 @@ describe("local Bun CLI", () => {
   });
   it("generates CircleCI for a separate repository and comparison branch", () => {
     const root = repository();
+    writeFileSync(join(root, "pyproject.toml"), generatePythonToolchainConfig());
     expect(run(["init-ci", root, "--base-branch", "develop"], tmpdir()).status).toBe(0);
     const config = readFileSync(join(root, ".circleci/config.yml"), "utf8");
     expect(config).toContain("--compare-branch=origin/develop");
     expect(config).toContain("--fail-under=70");
     expect(run(["init-ci", root], tmpdir()).status).toBe(1);
     expect(readFileSync(join(root, ".circleci/config.yml"), "utf8")).toBe(config);
+  });
+  it("distinguishes a failed score gate from unavailable measurements", () => {
+    const root = repository();
+    successfulHatch(root);
+    const env = { ...process.env, PATH: root, BTAR_FAKE_COVERAGE: "50" };
+    const result = run(["analyze", ".", "--trust-project", "--json", "--fail-under", "90"], root, env);
+    expect(result.status).toBe(1);
+    const report = JSON.parse(String(result.stdout));
+    expect(report).toMatchObject({ score: 80, gateResult: "failed" });
+    for (const measurements of Object.values(report.metrics)) {
+      expect(Object.values(measurements as Record<string, {success:boolean}>).every(value => value.success)).toBe(true);
+    }
+    expect(run(["analyze", ".", "--trust-project", "--json", "--fail-under", "80"], root, env).status).toBe(0);
+  });
+  it("rejects legacy and changed-scope baselines until deliberately replaced", () => {
+    const root = repository();
+    successfulHatch(root);
+    const env = { ...process.env, PATH: root };
+    writeFileSync(join(root, ".btar-score"), JSON.stringify({score:100,timestamp:new Date().toISOString(),breakdown:{typeStrictness:30,lintErrors:30,coverage:40}}));
+    const legacy = run(["analyze", ".", "--trust-project", "--json", "--ratchet"], root, env);
+    expect(legacy.status).toBe(1);
+    expect(JSON.parse(String(legacy.stdout)).gateResult).toBe("failed");
+    expect(String(legacy.stderr)).toContain("--save-baseline");
+    expect(run(["analyze", ".", "--trust-project", "--json", "--save-baseline"], root, env).status).toBe(0);
+    expect(JSON.parse(readFileSync(join(root, ".btar-score"), "utf8"))).toMatchObject({schemaVersion:1,projectPaths:["."]});
+    expect(run(["analyze", ".", "--trust-project", "--json", "--ratchet"], root, env).status).toBe(0);
+    mkdirSync(join(root, "packages", "other"), {recursive:true});
+    writeFileSync(join(root, "packages", "other", "hatch.toml"), "[envs.default]\n");
+    const changed = run(["analyze", ".", "--trust-project", "--json", "--ratchet"], root, env);
+    expect(changed.status).toBe(1);
+    expect(JSON.parse(String(changed.stdout)).gateResult).toBe("failed");
   });
   it("rejects a file used as a repository directory", () => {
     const root = repository();

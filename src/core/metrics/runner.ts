@@ -81,14 +81,17 @@ export async function runTool(options: RunToolOptions): Promise<ToolResult> {
     child.on("exit", () => { childExited = true; });
 
     const timeoutId = setTimeout(() => {
-      if (!childExited && child.pid !== undefined) {
+      if (child.pid !== undefined) {
         if (process.platform === "win32") {
-          // taskkill is Windows' built-in process-tree termination facility.
-          const killer = spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore", windowsHide: true });
-          killer.on("error", () => { child.kill("SIGKILL"); });
-          killer.unref();
+          if (!childExited) {
+            const fallback = (): void => { if (!childExited) child.kill("SIGKILL"); };
+            const killer = spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore", windowsHide: true });
+            killer.on("error", fallback);
+            killer.on("exit", (code) => { if (code !== 0) fallback(); });
+            killer.unref();
+          }
         } else {
-          try { process.kill(-child.pid, "SIGKILL"); } catch { child.kill("SIGKILL"); }
+          try { process.kill(-child.pid, "SIGKILL"); } catch { if (!childExited) child.kill("SIGKILL"); }
         }
       }
       child.stdout.destroy();

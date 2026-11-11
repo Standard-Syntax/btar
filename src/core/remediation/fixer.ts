@@ -6,7 +6,7 @@ interface FixTool { tool: string; command: string[]; parseOutput: (stdout: strin
 
 export function parseRuffFixOutput(_stdout: string, stderr: string, exitCode: number): FixResult {
   const fixed = stderr.match(/Fixed (\d+) errors?/i);
-  return exitCode === 0 ? { success: true, filesModified: -1, message: fixed ? `Ruff fixed ${fixed[1]} errors` : "Ruff fix completed", tool: "ruff" } : { success: false, filesModified: 0, message: stderr || "Ruff fix failed", tool: "ruff" };
+  return exitCode === 0 ? { success: true, filesModified: -1, message: fixed ? `Ruff fixed ${fixed[1]} errors` : "Ruff fix completed", tool: "ruff" } : { success: false, filesModified: 0, message: "Ruff fix failed", tool: "ruff" };
 }
 
 export const FIX_TOOLS: Record<SupportedLanguage, FixTool> = {
