@@ -124,6 +124,27 @@ thresholds:
     });
   });
 
+  it.each([
+    'languages: [typescript]', 'exclude: true', 'exclude: [1]',
+    'thresholds: []', 'thresholds: { test_coverage: 101 }',
+    'thresholds: { lint_errors: -1 }', 'thresholds: { flaky_rate: .nan }',
+  ])("rejects invalid boundary configuration %s", async (content) => {
+    await fs.writeFile(path.join(tempDir, ".btar.yaml"), content);
+    await expect(loadConfig(tempDir)).rejects.toThrow(ConfigError);
+  });
+
+  it("does not silently ignore a missing explicit config", async () => {
+    await expect(loadConfig(tempDir, "missing.yaml")).rejects.toThrow(ConfigError);
+  });
+
+  it("loads an explicit configuration and isolates defaults", async () => {
+    await fs.writeFile(path.join(tempDir, "custom.yaml"), 'exclude: ["legacy/**"]');
+    expect((await loadConfig(tempDir, "custom.yaml")).exclude).toEqual(["legacy/**"]);
+    const first = await loadConfig(tempDir);
+    first.exclude.push("mutated");
+    expect((await loadConfig(tempDir)).exclude).not.toContain("mutated");
+  });
+
   describe("DEFAULT_CONFIG", () => {
     it("has expected default thresholds", () => {
       expect(DEFAULT_CONFIG.thresholds.type_strictness).toBe(0);

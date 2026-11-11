@@ -3,38 +3,53 @@ version: 2.1
 jobs:
   verify:
     docker:
-      - image: cimg/node:22.16
+      - image: cimg/python:3.14.10
     steps:
       - checkout
-      - restore_cache:
-          keys:
-            - npm-v1-{{ checksum "package-lock.json" }}
+      - run:
+          name: Install Bun 1.4.4
+          command: .circleci/install-bun.sh
       - run:
           name: Install dependencies
-          command: npm ci
-      - save_cache:
-          key: npm-v1-{{ checksum "package-lock.json" }}
-          paths:
-            - ~/.npm
-      - run:
-          name: Compile TypeScript
-          command: npm run build
+          command: bun install --frozen-lockfile
       - run:
           name: Type check
-          command: npm run typecheck
+          command: bun run typecheck
       - run:
-          name: Lint
-          command: npm run lint
+          name: Build local CLI
+          command: bun run build
       - run:
-          name: Unit tests
-          command: npm test
+          name: Lint implementation
+          command: bun run lint
       - run:
-          name: Verify readiness ratchet
-          command: node dist/cli.js analyze . --json --ratchet > btar-report.json
+          name: Test implementation and CLI
+          command: bun run test:coverage
+      - run:
+          name: Smoke test built CLI
+          command: bun dist/cli.js --help
       - store_artifacts:
-          path: btar-report.json
+          path: coverage
+
+  python-integration:
+    docker:
+      - image: cimg/python:3.14.10
+    steps:
+      - checkout
+      - run:
+          name: Install Bun 1.4.4
+          command: .circleci/install-bun.sh
+      - run:
+          name: Install Hatch
+          command: python -m pip install --user hatch==1.16.5
+      - run:
+          name: Install dependencies
+          command: bun install --frozen-lockfile
+      - run:
+          name: Verify Python integration
+          command: bun run verify:python
 
 workflows:
   verify:
     jobs:
       - verify
+      - python-integration

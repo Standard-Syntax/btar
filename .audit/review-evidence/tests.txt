@@ -1,0 +1,86 @@
+$ bun --bun run vitest run --coverage
+
+ RUN  v3.2.4 /home/dscv/Repo/btar
+      Coverage enabled with v8
+
+ ✓ src/core/context/python-toolchain.test.ts (1 test) 6ms
+ ✓ src/core/scoring.test.ts (17 tests) 8ms
+ ✓ src/core/context/claude-hooks.test.ts (3 tests) 9ms
+ ✓ src/core/detector.test.ts (9 tests) 11ms
+ ✓ src/core/context/agents-md.test.ts (6 tests) 8ms
+ ✓ src/core/remediation/ratchet.test.ts (23 tests) 18ms
+ ✓ src/core/context/pre-commit.test.ts (1 test) 22ms
+stderr | src/commands/init-ci.test.ts > requires declared Hatch tools before writing a workflow
+Missing Hatch default environment dependencies: ruff, pyrefly, pytest, pytest-cov, hypothesis, diff-cover, semgrep. Generate and merge the python-toolchain configuration into pyproject.toml first.
+
+stdout | src/commands/init-ci.test.ts > requires declared Hatch tools before writing a workflow
+Created CircleCI configuration: /tmp/btar-ci-DlZNnG/.circleci/config.yml
+
+stderr | src/commands/init-ci.test.ts > preserves an existing workflow when forced generation lacks prerequisites
+Missing Hatch default environment dependencies: ruff, pyrefly, pytest, pytest-cov, hypothesis, diff-cover, semgrep. Generate and merge the python-toolchain configuration into pyproject.toml first.
+
+ ✓ src/commands/init-ci.test.ts (6 tests) 23ms
+ ✓ src/core/config.test.ts (18 tests) 35ms
+ ✓ src/core/remediation/fixer.test.ts (6 tests) 166ms
+ ✓ src/core/metrics/linter.test.ts (13 tests) 170ms
+ ✓ src/core/metrics/coverage.test.ts (7 tests) 170ms
+ ✓ src/core/metrics/type-checker.test.ts (6 tests) 167ms
+ ✓ src/commands/context.test.ts (3 tests) 283ms
+ ✓ src/core/metrics/index.test.ts (8 tests) 263ms
+ ✓ src/core/metrics/runner.test.ts (4 tests) 1870ms
+   ✓ runTool > times out a child and its pipe-holding descendant  853ms
+   ✓ runTool > terminates descendants after their Hatch-shaped parent exits  852ms
+ ✓ src/cli.test.ts (18 tests) 2894ms
+   ✓ local Bun CLI > keeps credential-like subprocess output out of reports and terminal errors  432ms
+   ✓ local Bun CLI > rejects legacy and changed-scope baselines until deliberately replaced  500ms
+
+ Test Files  17 passed (17)
+      Tests  149 passed (149)
+   Start at  13:02:03
+   Duration  3.18s (transform 462ms, setup 0ms, collect 1.28s, tests 6.12s, environment 6ms, prepare 717ms)
+
+ % Coverage report from v8
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s
+-------------------|---------|----------|---------|---------|-------------------
+All files          |   49.96 |    84.82 |      90 |   49.96 |
+ src               |       0 |      100 |     100 |       0 |
+  cli.ts           |       0 |      100 |     100 |       0 | 6-79
+  index.ts         |       0 |      100 |     100 |       0 | 6
+ src/commands      |   13.36 |    69.69 |     100 |   13.36 |
+  analyze.ts       |       0 |      100 |     100 |       0 | 6-261
+  context.ts       |       0 |      100 |     100 |       0 | 6-244
+  fix.ts           |       0 |      100 |     100 |       0 | 6-115
+  init-ci.ts       |   94.28 |    66.66 |     100 |   94.28 | 112-115
+ src/core          |   58.75 |       90 |      50 |   58.75 |
+  config.ts        |   96.96 |    94.87 |     100 |   96.96 | 68-69
+  detector.ts      |     100 |    87.17 |     100 |     100 | 24,29,43,48,61
+  output.ts        |       0 |      100 |     100 |       0 | 99-198
+  progress.tsx     |       0 |        0 |       0 |       0 | 1-71
+  scoring.ts       |   93.93 |    89.47 |     100 |   93.93 | 83-84,144-145
+  types.ts         |     100 |      100 |     100 |     100 |
+ src/core/context  |     100 |     90.9 |     100 |     100 |
+  agents-md.ts     |     100 |    84.61 |     100 |     100 | 14-16
+  claude-hooks.ts  |     100 |      100 |     100 |     100 |
+  pre-commit.ts    |     100 |      100 |     100 |     100 |
+  ...-toolchain.ts |     100 |      100 |     100 |     100 |
+ src/core/metrics  |   89.72 |    80.73 |     100 |   89.72 |
+  coverage.ts      |     100 |    84.21 |     100 |     100 | 16,35,38
+  index.ts         |   98.07 |    78.78 |     100 |   98.07 | 114-115
+  linter.ts        |     100 |    86.36 |     100 |     100 | 24,27
+  runner.ts        |   66.66 |       75 |     100 |   66.66 | ...,86-92,128-140
+  type-checker.ts  |     100 |    77.27 |     100 |     100 | 11-13,26,29
+  types.ts         |       0 |        0 |       0 |       0 |
+ ...re/remediation |   88.28 |    89.47 |     100 |   88.28 |
+  fixer.ts         |     100 |       75 |     100 |     100 | 9,19
+  index.ts         |       0 |      100 |     100 |       0 | 6-22
+  ratchet.ts       |      98 |    91.48 |     100 |      98 | 96-97
+  ...mendations.ts |       0 |      100 |     100 |       0 | 9-19
+-------------------|---------|----------|---------|---------|-------------------
+
+=============================== Coverage summary ===============================
+Statements   : 49.96% ( 667/1335 )
+Branches     : 84.82% ( 274/323 )
+Functions    : 90% ( 9/10 )
+Lines        : 49.96% ( 667/1335 )
+================================================================================

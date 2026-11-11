@@ -1,0 +1,5 @@
+$ bun build src/cli.ts src/index.ts --outdir dist --target bun --packages external && tsc --emitDeclarationOnly && chmod +x dist/cli.js
+Bundled 26 modules in 4ms
+
+  cli.js    58.63 KB  (entry point)
+  index.js  69 bytes  (entry point)

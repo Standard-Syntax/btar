@@ -1,6 +1,6 @@
 /**
  * Tool Runner Utility
- * Subprocess execution for language metric tools
+ * Subprocess execution for Python project metric tools
  */
 
 import { spawn } from "node:child_process";
@@ -40,13 +40,13 @@ export interface RunToolOptions {
  * @example
  * ```ts
  * const result = await runTool({
- *   command: ["npx", "tsc", "--noEmit"],
+ *   command: ["hatch", "run", "pyrefly", "check"],
  *   cwd: "/path/to/project",
  *   timeout: 30000
  * });
  *
  * if (result.exitCode === 0) {
- *   console.log("TypeScript check passed");
+ *   console.log("Pyrefly check passed");
  * } else {
  *   console.error(result.stderr);
  * }
@@ -69,18 +69,34 @@ export async function runTool(options: RunToolOptions): Promise<ToolResult> {
   return new Promise((resolve) => {
     let stdout = "";
     let stderr = "";
-    let timedOut = false;
+    let childExited = false;
 
     const child = spawn(executable, args, {
       cwd,
       stdio: ["ignore", "pipe", "pipe"],
       shell: false,
+      detached: process.platform !== "win32",
     });
 
-    // Handle timeout
+    child.on("exit", () => { childExited = true; });
+
     const timeoutId = setTimeout(() => {
-      timedOut = true;
-      child.kill("SIGKILL");
+      if (child.pid !== undefined) {
+        if (process.platform === "win32") {
+          if (!childExited) {
+            const fallback = (): void => { if (!childExited) child.kill("SIGKILL"); };
+            const killer = spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore", windowsHide: true });
+            killer.on("error", fallback);
+            killer.on("exit", (code) => { if (code !== 0) fallback(); });
+            killer.unref();
+          }
+        } else {
+          try { process.kill(-child.pid, "SIGKILL"); } catch { if (!childExited) child.kill("SIGKILL"); }
+        }
+      }
+      child.stdout.destroy();
+      child.stderr.destroy();
+      resolve({ stdout, stderr, exitCode: -1, timedOut: true });
     }, timeout);
 
     // Capture stdout
@@ -102,8 +118,8 @@ export async function runTool(options: RunToolOptions): Promise<ToolResult> {
       resolve({
         stdout,
         stderr,
-        exitCode: timedOut ? -1 : (code ?? 1),
-        timedOut,
+        exitCode: code ?? 1,
+        timedOut: false,
       });
     });
 

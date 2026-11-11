@@ -1,348 +1,67 @@
-/**
- * Coverage Measurement Tests
- */
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { measureCoverage, COVERAGE_TOOLS, parsePytestCoverageJson } from "./coverage.js";
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { COVERAGE_TOOLS, measureCoverage, parseJacocoCoverage } from "./coverage.js";
-import * as runner from "./runner.js";
-import * as fs from "node:fs/promises";
+let root: string;
+let oldPath: string | undefined;
+beforeEach(() => {
+  root = mkdtempSync(join(tmpdir(), "btar-invocation-"));
+  oldPath = process.env.PATH;
+  process.env.PATH = root;
+  process.env.BTAR_RECORD = join(root, "record");
+  writeFileSync(join(root, "hatch"), "#!/bin/sh\nprintf '%s\\n' \"$PWD\" \"$@\" > \"$BTAR_RECORD\"\nif [ \"$BTAR_OUTPUT\" = hang ]; then exec /bin/sleep 10; fi\nfor arg in \"$@\"; do\n  case \"$arg\" in --cov-report=json:*) printf '%s' \"$BTAR_OUTPUT\" > \"${arg#--cov-report=json:}\";; esac\ndone\nexit \"$BTAR_STATUS\"\n", { mode: 0o755 });
+});
+afterEach(() => {
+  if (oldPath === undefined) delete process.env.PATH; else process.env.PATH = oldPath;
+  delete process.env.BTAR_RECORD; delete process.env.BTAR_OUTPUT; delete process.env.BTAR_STATUS;
+  rmSync(root, { recursive: true, force: true });
+});
 
-// Mock the runner module
-vi.mock("./runner.js", () => ({
-  runTool: vi.fn(),
-}));
-
-describe("COVERAGE_TOOLS", () => {
-  describe("tool mappings", () => {
-    it("maps typescript to c8", () => {
-      expect(COVERAGE_TOOLS.typescript.tool).toBe("c8");
-      expect(COVERAGE_TOOLS.typescript.command).toContain("c8");
-    });
-
-    it("maps javascript to c8", () => {
-      expect(COVERAGE_TOOLS.javascript.tool).toBe("c8");
-      expect(COVERAGE_TOOLS.javascript.command).toContain("c8");
-    });
-
-    it("maps python to SlipCover + pytest", () => {
-      expect(COVERAGE_TOOLS.python.tool).toBe("slipcover");
-      expect(COVERAGE_TOOLS.python.command).toEqual([
-        "uv", "run", "--python", "3.14", "python", "-m", "slipcover", "--json", "-m", "pytest", "-q",
-      ]);
-    });
-
-    it("maps go to go test", () => {
-      expect(COVERAGE_TOOLS.go.tool).toBe("go test");
-      expect(COVERAGE_TOOLS.go.command).toContain("go");
-      expect(COVERAGE_TOOLS.go.command).toContain("-cover");
-    });
-
-    it("maps all supported languages", () => {
-      const languages = [
-        "typescript",
-        "javascript",
-        "python",
-        "go",
-        "java",
-        "kotlin",
-        "swift",
-        "ruby",
-        "php",
-      ] as const;
-
-      for (const lang of languages) {
-        expect(COVERAGE_TOOLS[lang]).toBeDefined();
-        expect(COVERAGE_TOOLS[lang].tool).toBeTruthy();
-        expect(COVERAGE_TOOLS[lang].command.length).toBeGreaterThan(0);
-        expect(typeof COVERAGE_TOOLS[lang].parseCoverage).toBe("function");
-      }
-    });
+describe.skipIf(process.platform === "win32")("measureCoverage invocation", () => {
+  it("executes Hatch in the target directory and consumes its output", async () => {
+    process.env.BTAR_OUTPUT = "{\"files\":{\"sample.py\":{}},\"totals\":{\"percent_covered\":87.5}}";
+    process.env.BTAR_STATUS = "0";
+    const result = await measureCoverage("python", root);
+    expect(result.success).toBe(true);
+    expect(result.value).toBe(87.5);
+    const lines = readFileSync(join(root, "record"), "utf8").trim().split("\n");
+    expect(lines[0]).toBe(root);
+    expect(lines.slice(1, 4)).toEqual(["run", "pytest", "--cov"]);
+    expect(lines[4]).toMatch(/^--cov-report=json:.*coverage\.json$/);
+    expect(lines[5]).toBe("-q");
+  });
+  it("reports a subprocess timeout", async () => {
+    const original = globalThis.setTimeout;
+    const spy = vi.spyOn(globalThis, "setTimeout").mockImplementation(((callback: (...args: unknown[]) => void, delay?: number, ...args: unknown[]) => original(callback, delay === 120000 ? 150 : delay, ...args)) as typeof setTimeout);
+    try {
+      process.env.BTAR_OUTPUT = "hang"; process.env.BTAR_STATUS = "0";
+      const result = await measureCoverage("python", root);
+      expect(result.success).toBe(false);
+      expect(JSON.stringify(result)).toContain("timed out");
+    } finally { spy.mockRestore(); }
+  });
+  it("reports subprocess failure", async () => {
+    process.env.BTAR_OUTPUT = "failure"; process.env.BTAR_STATUS = "2";
+    expect((await measureCoverage("python", root)).success).toBe(false);
+  });
+  it("rejects malformed output", async () => {
+    process.env.BTAR_OUTPUT = "not json"; process.env.BTAR_STATUS = "0";
+    expect((await measureCoverage("python", root)).success).toBe(false);
   });
 });
 
-describe("coverage parsing", () => {
-  describe("c8/nyc parser", () => {
-    const parser = COVERAGE_TOOLS.typescript.parseCoverage;
-
-    it("parses All files percentage", () => {
-      const stdout = `
-----------|---------|----------|---------|---------|-------------------
-File      | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s
-----------|---------|----------|---------|---------|-------------------
-All files |   85.5  |    90.2  |   78.3  |   85.5  |
- src/     |   85.5  |    90.2  |   78.3  |   85.5  |
-----------|---------|----------|---------|---------|-------------------
-`;
-      expect(parser(stdout, "", 0)).toBe(85.5);
-    });
-
-    it("parses integer percentage", () => {
-      const stdout = `
-All files |   100   |   100    |   100   |   100   |
-`;
-      expect(parser(stdout, "", 0)).toBe(100);
-    });
-
-    it("returns -1 for tool not found (exit 127)", () => {
-      expect(parser("", "command not found", 127)).toBe(-1);
-    });
-
-    it("returns 0 for no coverage data", () => {
-      const stdout = "No tests found";
-      expect(parser(stdout, "", 1)).toBe(0);
-    });
-
-    it("clamps values to 0-100 range", () => {
-      // Edge case: percentage > 100 (shouldn't happen but handle it)
-      const stdout = `All files | 150.5 |`;
-      expect(parser(stdout, "", 0)).toBe(100);
-    });
+describe("pytest-cov metrics", () => {
+  it("uses pytest-cov through Hatch", () => expect(COVERAGE_TOOLS.python.command).toEqual(["hatch", "run", "pytest", "--cov", "--cov-report=json:coverage.json", "-q"]));
+  it("reads the reported percentage", () => expect(parsePytestCoverageJson('{"files":{"sample.py":{"executed_lines":[1],"summary":{"covered_lines":1,"num_statements":1,"percent_covered":87.5},"missing_lines":[],"excluded_lines":[]}},"totals":{"percent_covered":87.5}}', "", 0)).toBe(87.5));
+  it("rejects reports without a nonempty files object", () => {
+    for (const files of [undefined, {}, [], null, "invalid", { "sample.py": null }, { "sample.py": [] }, { "": {} }]) {
+      expect(parsePytestCoverageJson(JSON.stringify({ files, totals: { percent_covered: 100 } }), "", 0)).toBe(-1);
+    }
   });
-
-  describe("SlipCover JSON parser", () => {
-    const parser = COVERAGE_TOOLS.python.parseCoverage;
-    const report = (value: number) => JSON.stringify({
-      files: { "app.py": { executed_lines: [1], missing_lines: [2] } },
-      summary: { percent_covered: value },
-    });
-    it("reads global percentage", () => {
-      expect(parser(report(82.5), "", 0)).toBe(82.5);
-    });
-    it("rejects missing reports, out-of-range data, and failures", () => {
-      expect(parser('{"files":{},"summary":{"percent_covered":100}}', "", 0)).toBe(-1);
-      expect(parser("not-json", "", 0)).toBe(-1);
-      expect(parser(report(102), "", 0)).toBe(-1);
-      expect(parser(report(80), "", 1)).toBe(-1);
-    });
-  });
-
-  describe("go test parser", () => {
-    const parser = COVERAGE_TOOLS.go.parseCoverage;
-
-    it("parses coverage percentage from single package", () => {
-      const stdout = `
-ok  	example.com/pkg	0.015s	coverage: 72.5% of statements
-`;
-      expect(parser(stdout, "", 0)).toBe(72.5);
-    });
-
-    it("parses coverage from multiple packages (averages)", () => {
-      const stdout = `
-ok  	example.com/pkg1	0.010s	coverage: 80.0% of statements
-ok  	example.com/pkg2	0.012s	coverage: 60.0% of statements
-`;
-      expect(parser(stdout, "", 0)).toBe(70); // Average of 80 and 60
-    });
-
-    it("returns 0 for no test files", () => {
-      const stdout = `
-?   	example.com/pkg	[no test files]
-`;
-      expect(parser(stdout, "", 0)).toBe(0);
-    });
-
-    it("returns -1 for tool not found", () => {
-      expect(parser("", "go: command not found", 127)).toBe(-1);
-    });
-
-    it("parses integer percentage", () => {
-      const stdout = `
-ok  	example.com/pkg	0.015s	coverage: 100% of statements
-`;
-      expect(parser(stdout, "", 0)).toBe(100);
-    });
-  });
-
-  describe("JaCoCo XML parser", () => {
-    it("parses LINE counter from JaCoCo XML", () => {
-      const xml = `<?xml version="1.0"?>
-<report name="test">
-  <counter type="INSTRUCTION" missed="100" covered="200"/>
-  <counter type="BRANCH" missed="10" covered="30"/>
-  <counter type="LINE" missed="50" covered="150"/>
-  <counter type="METHOD" missed="5" covered="20"/>
-</report>`;
-      // 150 / (50 + 150) = 0.75 = 75%
-      expect(parseJacocoCoverage(xml)).toBe(75);
-    });
-
-    it("returns 0 when no LINE counter found", () => {
-      const xml = `<?xml version="1.0"?><report name="test"></report>`;
-      expect(parseJacocoCoverage(xml)).toBe(0);
-    });
-
-    it("returns 0 when total is 0", () => {
-      const xml = `<counter type="LINE" missed="0" covered="0"/>`;
-      expect(parseJacocoCoverage(xml)).toBe(0);
-    });
-
-    it("handles 100% coverage", () => {
-      const xml = `<counter type="LINE" missed="0" covered="200"/>`;
-      expect(parseJacocoCoverage(xml)).toBe(100);
-    });
-
-    it("rounds to one decimal place", () => {
-      const xml = `<counter type="LINE" missed="1" covered="2"/>`;
-      // 2/3 = 66.666... → 66.7
-      expect(parseJacocoCoverage(xml)).toBe(66.7);
-    });
-
-    it("uses last LINE counter (report-level aggregate) not first (method-level)", () => {
-      const xml = `<?xml version="1.0"?>
-<report name="test">
-  <package name="com/example">
-    <class name="com/example/Foo">
-      <method name="bar" desc="()V" line="5">
-        <counter type="LINE" missed="3" covered="0"/>
-      </method>
-      <counter type="LINE" missed="3" covered="0"/>
-    </class>
-    <counter type="LINE" missed="3" covered="0"/>
-  </package>
-  <counter type="LINE" missed="50" covered="150"/>
-</report>`;
-      // Should use last match (report-level): 150/(50+150) = 75%
-      // NOT first match (method-level): 0/(3+0) = 0%
-      expect(parseJacocoCoverage(xml)).toBe(75);
-    });
-  });
-});
-
-describe("measureCoverage", () => {
-  const mockRunTool = vi.mocked(runner.runTool);
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it("returns coverage percentage for typescript", async () => {
-    mockRunTool.mockResolvedValue({
-      stdout: "All files | 85.5 | 90 | 80 | 85.5 |",
-      stderr: "",
-      exitCode: 0,
-      timedOut: false,
-    });
-
-    const result = await measureCoverage("typescript", "/test/project");
-
-    expect(result.metric).toBe("test_coverage");
-    expect(result.tool).toBe("c8");
-    expect(result.value).toBe(85.5);
-    expect(result.success).toBe(true);
-  });
-
-  it("measures Python only from a fresh JSON artifact", async () => {
-    mockRunTool.mockImplementationOnce(async ({ command }) => {
-      const out = command[command.indexOf("--out") + 1];
-      await fs.writeFile(out, JSON.stringify({
-        files: { "app.py": { executed_lines: [1], missing_lines: [2] } },
-        summary: { percent_covered: 80 },
-      }));
-      return { stdout: "2 passed", stderr: "", exitCode: 0, timedOut: false };
-    });
-    const result = await measureCoverage("python", "/test/project");
-    expect(result.metric).toBe("test_coverage");
-    expect(result.tool).toBe("slipcover");
-    expect(result.value).toBe(80);
-    expect(result.success).toBe(true);
-  });
-
-  it("rejects Python test failures", async () => {
-    mockRunTool.mockResolvedValueOnce({
-      stdout: "1 failed", stderr: "", exitCode: 1, timedOut: false,
-    });
-    const result = await measureCoverage("python", "/test/project");
-    expect(result.success).toBe(false);
-    expect(result.value).toBe(-1);
-  });
-
-  it("rejects a missing SlipCover report", async () => {
-    mockRunTool.mockResolvedValueOnce({
-      stdout: "1 passed", stderr: "", exitCode: 0, timedOut: false,
-    });
-    const result = await measureCoverage("python", "/test/project");
-    expect(result.success).toBe(false);
-    expect(result.raw).toContain("did not create");
-  });
-
-  it("returns coverage percentage for go", async () => {
-    mockRunTool.mockResolvedValue({
-      stdout: "ok example.com/pkg 0.01s coverage: 72.5% of statements",
-      stderr: "",
-      exitCode: 0,
-      timedOut: false,
-    });
-
-    const result = await measureCoverage("go", "/test/project");
-
-    expect(result.metric).toBe("test_coverage");
-    expect(result.tool).toBe("go test");
-    expect(result.value).toBe(72.5);
-    expect(result.success).toBe(true);
-  });
-
-  it("uses extended timeout (120s)", async () => {
-    mockRunTool.mockResolvedValue({
-      stdout: "",
-      stderr: "",
-      exitCode: 0,
-      timedOut: false,
-    });
-
-    await measureCoverage("typescript", "/test/project");
-
-    expect(mockRunTool).toHaveBeenCalledWith({
-      command: expect.any(Array),
-      cwd: "/test/project",
-      timeout: 120000,
-    });
-  });
-
-  it("handles tool not found", async () => {
-    mockRunTool.mockResolvedValue({
-      stdout: "",
-      stderr: "c8: command not found",
-      exitCode: 127,
-      timedOut: false,
-    });
-
-    const result = await measureCoverage("typescript", "/test/project");
-
-    expect(result.success).toBe(false);
-    expect(result.value).toBe(-1);
-  });
-
-  it("handles timeout", async () => {
-    mockRunTool.mockResolvedValue({
-      stdout: "",
-      stderr: "",
-      exitCode: -1,
-      timedOut: true,
-    });
-
-    const result = await measureCoverage("typescript", "/test/project");
-
-    expect(result.success).toBe(false);
-    expect(result.value).toBe(-1);
-    expect(result.raw).toContain("timed out");
-  });
-
-  it("normalizes value to 0-100 range", async () => {
-    // Even if tests fail, if we get coverage output we use it
-    mockRunTool.mockResolvedValue({
-      stdout: "All files | 45.3 |",
-      stderr: "",
-      exitCode: 1, // Tests failed but coverage still reported
-      timedOut: false,
-    });
-
-    const result = await measureCoverage("typescript", "/test/project");
-
-    expect(result.value).toBe(45.3);
-    expect(result.success).toBe(true);
+  it("rejects missing or unsuccessful evidence", () => {
+    expect(parsePytestCoverageJson("{}", "", 0)).toBe(-1);
+    expect(parsePytestCoverageJson('{"totals":{"percent_covered":80}}', "", 1)).toBe(-1);
   });
 });

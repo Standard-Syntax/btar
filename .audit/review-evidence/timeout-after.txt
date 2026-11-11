@@ -1,0 +1,12 @@
+$ bun --bun run vitest run src/core/metrics/runner.test.ts
+
+ RUN  v3.2.4 /home/dscv/Repo/btar
+
+ ✓ src/core/metrics/runner.test.ts (4 tests) 1867ms
+   ✓ runTool > times out a child and its pipe-holding descendant  852ms
+   ✓ runTool > terminates descendants after their Hatch-shaped parent exits  852ms
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  12:59:08
+   Duration  2.02s (transform 28ms, setup 0ms, collect 22ms, tests 1.87s, environment 0ms, prepare 24ms)

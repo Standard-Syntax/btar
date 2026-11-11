@@ -8,7 +8,7 @@
  */
 
 import { readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { ScoreResult } from "../scoring.js";
 
 /**
@@ -20,6 +20,9 @@ const RATCHET_FILE = ".btar-score";
  * Persisted ratchet state
  */
 export interface RatchetState {
+  schemaVersion: 1;
+  analysisScope: "python-3.14-pyrefly-ruff-pytest-cov-v1";
+  projectPaths: string[];
   /** Baseline score that must be maintained or exceeded */
   score: number;
   /** ISO timestamp when this baseline was saved */
@@ -40,99 +43,88 @@ export interface RatchetResult {
   delta: number;
 }
 
-/**
- * Validate that an object is a valid RatchetState
- */
-function isValidRatchetState(obj: unknown): obj is RatchetState {
-  if (typeof obj !== "object" || obj === null) {
-    return false;
-  }
+const ANALYSIS_SCOPE = "python-3.14-pyrefly-ruff-pytest-cov-v1";
+const MALFORMED = "Baseline file is malformed. Run --save-baseline deliberately to replace it.";
+const INCOMPATIBLE = "Baseline is incompatible with this analysis. Run --save-baseline deliberately to replace it.";
 
-  const state = obj as Record<string, unknown>;
-
-  // Check required fields exist and have correct types
-  if (typeof state.score !== "number") {
-    return false;
-  }
-
-  if (typeof state.timestamp !== "string") {
-    return false;
-  }
-
-  if (typeof state.breakdown !== "object" || state.breakdown === null) {
-    return false;
-  }
-
-  const breakdown = state.breakdown as Record<string, unknown>;
-  if (
-    typeof breakdown.typeStrictness !== "number" ||
-    typeof breakdown.lintErrors !== "number" ||
-    typeof breakdown.coverage !== "number"
-  ) {
-    return false;
-  }
-
-  return true;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/**
- * Load persisted ratchet score from .btar-score file
- *
- * @param directory - Directory containing .btar-score file
- * @returns RatchetState if file exists and is valid, null otherwise
- *
- * @example
- * ```ts
- * const baseline = await loadRatchetScore("/path/to/project");
- * if (baseline) {
- *   console.log(`Baseline score: ${baseline.score}`);
- * } else {
- *   console.log("No baseline score set");
- * }
- * ```
- */
-export async function loadRatchetScore(directory: string): Promise<RatchetState | null> {
-  const filePath = join(directory, RATCHET_FILE);
+function inRange(value: unknown, max: number): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= max;
+}
 
-  try {
-    const content = await readFile(filePath, "utf-8");
-    const parsed = JSON.parse(content) as unknown;
-
-    if (!isValidRatchetState(parsed)) {
-      return null;
+function canonicalProjects(directory: string, projectPaths: string[]): string[] {
+  const root = resolve(directory);
+  const paths = projectPaths.map((path) => {
+    const project = relative(root, resolve(root, path));
+    if (project === ".." || project.startsWith(`..${sep}`) || isAbsolute(project)) {
+      throw new Error("Project path is outside the analysis directory.");
     }
-
-    return parsed;
-  } catch {
-    // File doesn't exist or can't be read
-    return null;
-  }
+    return project.split(sep).join("/") || ".";
+  });
+  if (paths.length === 0) throw new Error("At least one project path is required.");
+  return [...new Set(paths)].sort();
 }
 
-/**
- * Save current score as new ratchet baseline
- *
- * @param directory - Directory to save .btar-score file in
- * @param scoreResult - Current score result to persist
- *
- * @example
- * ```ts
- * const score = calculateScore(metrics);
- * await saveRatchetScore("/path/to/project", score);
- * console.log("New baseline saved");
- * ```
- */
-export async function saveRatchetScore(directory: string, scoreResult: ScoreResult): Promise<void> {
-  const filePath = join(directory, RATCHET_FILE);
+function parseScore(value: unknown): Pick<RatchetState, "score" | "timestamp" | "breakdown"> | null {
+  if (!isRecord(value) || !isRecord(value.breakdown)) return null;
+  const { score, timestamp, breakdown } = value;
+  if (!inRange(score, 100) || typeof timestamp !== "string" ||
+      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(timestamp) ||
+      !Number.isFinite(Date.parse(timestamp)) || new Date(timestamp).toISOString() !== timestamp ||
+      !inRange(breakdown.typeStrictness, 30) || !inRange(breakdown.lintErrors, 30) ||
+      !inRange(breakdown.coverage, 40)) return null;
+  return {
+    score, timestamp,
+    breakdown: {
+      typeStrictness: breakdown.typeStrictness,
+      lintErrors: breakdown.lintErrors,
+      coverage: breakdown.coverage,
+    },
+  };
+}
 
+/** Load a compatible baseline, or null when it is missing. */
+export async function loadRatchetScore(directory: string, projectPaths: string[] = ["."]): Promise<RatchetState | null> {
+  let content: string;
+  try {
+    content = await readFile(join(directory, RATCHET_FILE), "utf-8");
+  } catch (error) {
+    if (isRecord(error) && error.code === "ENOENT") return null;
+    throw error;
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    throw new Error(MALFORMED);
+  }
+  const score = parseScore(parsed);
+  if (!score || !isRecord(parsed)) throw new Error(MALFORMED);
+  if (parsed.schemaVersion !== 1 || parsed.analysisScope !== ANALYSIS_SCOPE) {
+    throw new Error(INCOMPATIBLE);
+  }
+  if (!Array.isArray(parsed.projectPaths) || !parsed.projectPaths.every((path: unknown) => typeof path === "string")) throw new Error(MALFORMED);
+  const expected = canonicalProjects(directory, projectPaths);
+  const stored = parsed.projectPaths;
+  if (JSON.stringify(stored) !== JSON.stringify(expected)) throw new Error(INCOMPATIBLE);
+  return { schemaVersion: 1, analysisScope: ANALYSIS_SCOPE, projectPaths: expected, ...score };
+}
+
+/** Save the score and its analysis scope as a new baseline. */
+export async function saveRatchetScore(directory: string, scoreResult: ScoreResult, projectPaths: string[] = ["."]): Promise<void> {
   const state: RatchetState = {
+    schemaVersion: 1,
+    analysisScope: ANALYSIS_SCOPE,
+    projectPaths: canonicalProjects(directory, projectPaths),
     score: scoreResult.score,
     timestamp: new Date().toISOString(),
     breakdown: scoreResult.breakdown,
   };
-
-  const content = JSON.stringify(state, null, 2);
-  await writeFile(filePath, content, "utf-8");
+  if (!parseScore(state)) throw new Error("Cannot save an invalid baseline score.");
+  await writeFile(join(directory, RATCHET_FILE), JSON.stringify(state, null, 2), "utf-8");
 }
 
 /**

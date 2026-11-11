@@ -5,7 +5,7 @@
 
 import { Command } from "commander";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { dirname, resolve, basename } from "node:path";
+import { dirname, resolve, basename, join } from "node:path";
 import { loadConfig } from "../core/config.js";
 import { detectLanguages } from "../core/detector.js";
 import {
@@ -13,6 +13,7 @@ import {
   generateAgentsMd,
 } from "../core/context/agents-md.js";
 import { generatePreCommitConfig } from "../core/context/pre-commit.js";
+import { generatePythonToolchainConfig } from "../core/context/python-toolchain.js";
 import {
   generateClaudeHooks,
   formatAsSettingsJson,
@@ -70,7 +71,7 @@ generateCommand
   .option("-f, --force", "Overwrite existing file")
   .action(async (directory?: string, options?: { output?: string; force?: boolean }) => {
     const dir = resolve(directory ?? ".");
-    const outputPath = resolve(options?.output ?? "AGENTS.md");
+    const outputPath = resolve(options?.output ?? join(dir, "AGENTS.md"));
 
     // Check if output exists and force not set
     if (existsSync(outputPath) && !options?.force) {
@@ -119,7 +120,7 @@ generateCommand
   .option("-f, --force", "Overwrite existing file")
   .action(async (directory?: string, options?: { output?: string; force?: boolean }) => {
     const dir = resolve(directory ?? ".");
-    const outputPath = resolve(options?.output ?? ".pre-commit-config.yaml");
+    const outputPath = resolve(options?.output ?? join(dir, ".pre-commit-config.yaml"));
 
     // Check if output exists and force not set
     if (existsSync(outputPath) && !options?.force) {
@@ -175,7 +176,7 @@ generateCommand
       }
     ) => {
       const dir = resolve(directory ?? ".");
-      const outputPath = resolve(options?.output ?? ".claude/settings.json");
+      const outputPath = resolve(options?.output ?? join(dir, ".claude/settings.json"));
 
       // Check if output exists and force not set
       if (existsSync(outputPath) && !options?.force) {
@@ -207,8 +208,38 @@ generateCommand
       if (options?.pre !== false) hooks.push("PreToolUse");
       if (options?.post !== false) hooks.push("PostToolUse");
       console.log(`Hooks: ${hooks.join(", ")}`);
+      if (options?.post !== false) {
+        console.log("Post-tool analysis requires consent. Add --trust-project to its command to opt in to executing project code through Hatch.");
+      }
     }
   );
+
+generateCommand
+  .command("python-toolchain [directory]")
+  .description("Generate a Python 3.14 Hatch toolchain configuration")
+  .option("-o, --output <path>", "Output file path")
+  .option("-f, --force", "Overwrite an existing output file")
+  .action(async (directory?: string, options?: { output?: string; force?: boolean }) => {
+    const dir = resolve(directory ?? ".");
+    const projectFile = join(dir, "pyproject.toml");
+    const hasProjectConfiguration = [projectFile, join(dir, "hatch.toml"), join(dir, "setup.py"), join(dir, "setup.cfg")].some(existsSync);
+    const defaultOutput = hasProjectConfiguration ? join(dir, "pyproject.btar.toml") : projectFile;
+    const outputPath = resolve(options?.output ?? defaultOutput);
+    if (existsSync(outputPath) && !options?.force) {
+      console.error(`File already exists: ${outputPath}\nUse --force to overwrite.`);
+      process.exitCode = 1;
+      return;
+    }
+    mkdirSync(dirname(outputPath), { recursive: true });
+    writeFileSync(outputPath, generatePythonToolchainConfig(), "utf-8");
+    if (outputPath.endsWith("pyproject.btar.toml")) {
+      console.log(`Generated merge candidate: ${outputPath}`);
+      console.log("Merge its project metadata, Ruff, pytest, and coverage tables into pyproject.toml, preserving existing settings.");
+      console.log("If hatch.toml exists, merge the tool.hatch tables there without the tool.hatch prefix; otherwise merge them into pyproject.toml.");
+      return;
+    }
+    console.log(`Generated: ${outputPath}`);
+  });
 
 // Add generate subcommand to context
 contextCommand.addCommand(generateCommand);

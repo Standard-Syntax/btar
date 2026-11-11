@@ -1,293 +1,70 @@
-/**
- * AGENTS.md Validation and Generation
- *
- * Provides functions to validate existing AGENTS.md files and generate new ones
- * from codebase analysis. AGENTS.md is the standard format for providing context
- * to AI coding agents.
- */
+import { readFileSync } from "node:fs";
+import type { DetectedLanguage } from "../types.js";
 
-import { readFileSync, existsSync } from "node:fs";
-import type { DetectedLanguage, SupportedLanguage } from "../types.js";
+export interface AgentsMdValidation { exists: boolean; issues: string[]; sections: string[]; }
+export interface AgentsMdOptions { projectName: string; languages: DetectedLanguage[]; buildCommand?: string; testCommand?: string; lintCommand?: string; }
 
-/**
- * Result of validating an AGENTS.md file
- */
-export interface AgentsMdValidation {
-  exists: boolean;
-  issues: string[];
-  sections: string[];
-}
-
-/**
- * Options for generating an AGENTS.md file
- */
-export interface AgentsMdOptions {
-  projectName: string;
-  languages: DetectedLanguage[];
-  buildCommand?: string;
-  testCommand?: string;
-  lintCommand?: string;
-  buildSystem?: string;
-}
-
-/**
- * Recommended sections and their alternatives
- */
-const RECOMMENDED_SECTIONS: { name: string; alternatives: string[] }[] = [
-  { name: "Build", alternatives: ["Building", "Setup", "Installation"] },
-  { name: "Test", alternatives: ["Testing", "Tests"] },
-  { name: "Style", alternatives: ["Code Style", "Conventions", "Formatting"] },
+const REQUIRED_SECTIONS = [
+  { label: "Build", pattern: /\b(build|building|setup|installation)\b/i },
+  { label: "Testing", pattern: /\b(testing|tests)\b/i },
+  { label: "Code Style", pattern: /\b(code style|conventions|formatting)\b/i },
 ];
 
-/**
- * Language-specific configuration for AGENTS.md generation
- */
-interface LanguageConfig {
-  build: string;
-  test: string;
-  lint: string;
-  styleNotes: string;
-}
-
-const LANGUAGE_CONFIG: Record<SupportedLanguage, LanguageConfig> = {
-  typescript: {
-    build: "npm run build",
-    test: "npm test",
-    lint: "npm run lint",
-    styleNotes: "- Follow TypeScript strict mode conventions\n- Use ESLint with TypeScript parser",
-  },
-  javascript: {
-    build: "npm run build",
-    test: "npm test",
-    lint: "npm run lint",
-    styleNotes: "- Follow ESLint conventions\n- Use Prettier for formatting",
-  },
-  python: {
-    build: "uv sync --python 3.14",
-    test: "uv run --python 3.14 python -m slipcover -m pytest -q",
-    lint: "uv run --python 3.14 ruff check . && uv run --python 3.14 ruff format --check .",
-    styleNotes: "- Target Python 3.14\n- Run Pyrefly for type checking\n- Use Ruff for linting and formatting",
-  },
-  go: {
-    build: "go build ./...",
-    test: "go test ./...",
-    lint: "go fmt ./... && go vet ./...",
-    styleNotes: "- Run `go fmt` before committing\n- Follow Go naming conventions",
-  },
-  java: {
-    build: "mvn compile",
-    test: "mvn test",
-    lint: "mvn checkstyle:check",
-    styleNotes: "- Follow Java naming conventions\n- Use Checkstyle for enforcement",
-  },
-  kotlin: {
-    build: "./gradlew build",
-    test: "./gradlew test",
-    lint: "./gradlew ktlintCheck",
-    styleNotes: "- Follow Kotlin coding conventions\n- Use ktlint for formatting",
-  },
-  swift: {
-    build: "swift build",
-    test: "swift test",
-    lint: "swiftlint",
-    styleNotes: "- Follow Swift API design guidelines\n- Use SwiftLint for enforcement",
-  },
-  ruby: {
-    build: "bundle install",
-    test: "bundle exec rspec",
-    lint: "bundle exec rubocop",
-    styleNotes: "- Follow Ruby style guide\n- Use RuboCop for linting",
-  },
-  php: {
-    build: "composer install",
-    test: "vendor/bin/phpunit",
-    lint: "vendor/bin/phpcs",
-    styleNotes: "- Follow PSR-12 coding standard\n- Use PHP_CodeSniffer",
-  },
-};
-
-/**
- * Validate an existing AGENTS.md file
- *
- * @param filePath - Path to the AGENTS.md file
- * @returns Validation result with issues and detected sections
- */
 export async function validateAgentsMd(filePath: string): Promise<AgentsMdValidation> {
-  // Check if file exists
-  if (!existsSync(filePath)) {
-    return {
-      exists: false,
-      issues: ["File not found"],
-      sections: [],
-    };
-  }
-
-  // Read file content
   let content: string;
-  try {
-    content = readFileSync(filePath, "utf-8");
-  } catch {
-    return {
-      exists: false,
-      issues: ["File not found"],
-      sections: [],
-    };
-  }
-
-  // Check for empty file
-  if (content.trim() === "") {
-    return {
-      exists: true,
-      issues: ["Empty file"],
-      sections: [],
-    };
-  }
-
-  // Extract section headings (## and ### headings)
-  const headingPattern = /^#{1,3}\s+(.+)$/gm;
+  try { content = readFileSync(filePath, "utf-8"); }
+  catch { return { exists: false, issues: ["File not found"], sections: [] }; }
+  if (content.trim() === "") return { exists: true, issues: ["Empty file"], sections: [] };
   const sections: string[] = [];
-  let match;
-  while ((match = headingPattern.exec(content)) !== null) {
-    sections.push(match[1].trim());
-  }
-
-  // Check for recommended sections
-  const issues: string[] = [];
-
-  for (const recommended of RECOMMENDED_SECTIONS) {
-    const allNames = [recommended.name, ...recommended.alternatives];
-    const hasSection = sections.some((section) =>
-      allNames.some(
-        (name) =>
-          section.toLowerCase() === name.toLowerCase() ||
-          section.toLowerCase().includes(name.toLowerCase())
-      )
-    );
-
-    if (!hasSection) {
-      const alternativesList = recommended.alternatives.join(", ");
-      issues.push(
-        `Missing recommended: ${recommended.name} commands (or: ${alternativesList})`
-      );
+  let fence: { character: string; length: number } | undefined;
+  for (const line of content.split(/\r?\n/)) {
+    const marker = line.match(/^ {0,3}(`{3,}|~{3,})/);
+    if (marker) {
+      if (!fence) fence = { character: marker[1][0], length: marker[1].length };
+      else if (marker[1][0] === fence.character && marker[1].length >= fence.length && /^ {0,3}(?:`+|~+)\s*$/.test(line)) fence = undefined;
+      continue;
+    }
+    if (!fence) {
+      const heading = line.match(/^ {0,3}#{1,6}\s+(.+?)\s*#*\s*$/);
+      if (heading) sections.push(heading[1]);
     }
   }
-
-  return {
-    exists: true,
-    issues,
-    sections,
-  };
+  const issues = REQUIRED_SECTIONS.filter(({ pattern }) => !sections.some((section) => pattern.test(section))).map(({ label }) => `Missing recommended: ${label} commands`);
+  return { exists: true, issues, sections };
 }
 
-/**
- * Generate an AGENTS.md file from project information
- *
- * @param options - Generation options including project name and detected languages
- * @returns Generated markdown content
- */
 export function generateAgentsMd(options: AgentsMdOptions): string {
-  const { projectName, languages, buildCommand, testCommand, lintCommand } = options;
+  const build = options.buildCommand ?? "hatch env create";
+  const test = options.testCommand ?? "hatch run pytest --cov --cov-report=term-missing";
+  const lint = options.lintCommand ?? "hatch run ruff check . && hatch run ruff format --check .";
+  return `# ${options.projectName}
 
-  // Get primary language for defaults
-  const primaryLang = languages[0]?.language ?? "typescript";
-  const primaryDetected = languages[0];
-  let config = LANGUAGE_CONFIG[primaryLang];
+This file provides context for AI coding agents.
 
-  // Override with Gradle commands for Java when Gradle build system detected
-  if (primaryLang === "java" && (primaryDetected?.buildSystem === "gradle" || options.buildSystem === "gradle")) {
-    config = {
-      build: "./gradlew build",
-      test: primaryDetected?.isAndroid ? "./gradlew test" : "./gradlew test",
-      lint: "./gradlew lint",
-      styleNotes: "- Follow Java naming conventions\n- Use Android Lint for enforcement",
-    };
-  }
+## Language
 
-  // Use custom commands or language defaults
-  const build = buildCommand ?? config.build;
-  const test = testCommand ?? config.test;
-  const lint = lintCommand ?? config.lint;
+- Python 3.14 or newer.
 
-  // Build the markdown content
-  const lines: string[] = [];
+## Build
 
-  // Title
-  lines.push(`# ${projectName}`);
-  lines.push("");
-  lines.push("This file provides context for AI coding agents.");
-  lines.push("");
+\`\`\`bash
+${build}
+\`\`\`
 
-  // Languages section
-  if (languages.length > 0) {
-    lines.push("## Languages");
-    lines.push("");
-    for (const lang of languages) {
-      lines.push(`- **${capitalizeFirst(lang.language)}** (${lang.confidence} confidence)`);
-    }
-    lines.push("");
-  }
+## Testing
 
-  // Build section
-  lines.push("## Build");
-  lines.push("");
-  lines.push("```bash");
-  lines.push(build);
-  lines.push("```");
-  lines.push("");
+\`\`\`bash
+${test}
+\`\`\`
 
-  // Language-specific build notes
-  if (languages.length > 1) {
-    lines.push("### Per-Language Build");
-    lines.push("");
-    for (const lang of languages) {
-      const langConfig = LANGUAGE_CONFIG[lang.language];
-      lines.push(`- **${capitalizeFirst(lang.language)}:** \`${langConfig.build}\``);
-    }
-    lines.push("");
-  }
+Use Hypothesis for property-based tests when behavior has useful invariants.
 
-  // Test section
-  lines.push("## Testing");
-  lines.push("");
-  lines.push("```bash");
-  lines.push(test);
-  lines.push("```");
-  lines.push("");
+## Code Style
 
-  // Language-specific test notes
-  if (languages.length > 1) {
-    lines.push("### Per-Language Tests");
-    lines.push("");
-    for (const lang of languages) {
-      const langConfig = LANGUAGE_CONFIG[lang.language];
-      lines.push(`- **${capitalizeFirst(lang.language)}:** \`${langConfig.test}\``);
-    }
-    lines.push("");
-  }
+\`\`\`bash
+${lint}
+\`\`\`
 
-  // Style/Lint section
-  lines.push("## Code Style");
-  lines.push("");
-  lines.push("```bash");
-  lines.push(lint);
-  lines.push("```");
-  lines.push("");
-
-  // Language-specific style notes
-  for (const lang of languages) {
-    const langConfig = LANGUAGE_CONFIG[lang.language];
-    lines.push(`### ${capitalizeFirst(lang.language)}`);
-    lines.push("");
-    lines.push(langConfig.styleNotes);
-    lines.push("");
-  }
-
-  return lines.join("\n");
-}
-
-/**
- * Capitalize first letter of a string
- */
-function capitalizeFirst(str: string): string {
-  return str.charAt(0).toUpperCase() + str.slice(1);
+Run \`hatch run pyrefly check\` before handing off a change. Run \`gitleaks detect --no-banner\` from its installed binary and \`hatch run semgrep scan --config p/python --error --strict\` before handing off a change.
+`;
 }

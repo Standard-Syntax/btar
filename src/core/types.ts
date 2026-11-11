@@ -1,40 +1,15 @@
-/**
- * Core type definitions for BTAR
- */
+export type SupportedLanguage = "python";
 
-/**
- * Supported languages for detection
- */
-export type SupportedLanguage =
-  | "python"
-  | "typescript"
-  | "javascript"
-  | "go"
-  | "java"
-  | "kotlin"
-  | "swift"
-  | "ruby"
-  | "php";
+export type BuildSystem = "hatch" | "legacy-python";
 
-/**
- * Build system used by a project
- */
-export type BuildSystem = "gradle" | "maven" | "npm" | "go-mod" | "none";
-
-/**
- * Result of language detection
- */
 export interface DetectedLanguage {
-  language: SupportedLanguage;
-  confidence: "high" | "medium" | "low";
+  language: "python";
+  projectPath: string;
+  confidence: "high" | "medium";
   markers: string[];
-  buildSystem?: BuildSystem;
-  isAndroid?: boolean;
+  buildSystem: BuildSystem;
 }
 
-/**
- * Threshold configuration
- */
 export interface ThresholdConfig {
   type_strictness: number;
   lint_errors: number;
@@ -43,24 +18,14 @@ export interface ThresholdConfig {
   flaky_rate: number;
 }
 
-/**
- * Main BTAR configuration
- */
 export interface BTARConfig {
   thresholds: ThresholdConfig;
   exclude: string[];
   languages: SupportedLanguage[];
 }
 
-/**
- * Custom error for configuration issues
- */
 export class ConfigError extends Error {
-  constructor(
-    message: string,
-    public readonly line?: number,
-    public readonly column?: number
-  ) {
+  constructor(message: string, public readonly line?: number, public readonly column?: number) {
     super(message);
     this.name = "ConfigError";
   }

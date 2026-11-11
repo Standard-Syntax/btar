@@ -21,9 +21,11 @@ function createReport(options: {
   const { typeErrors, lintErrors, coverage, hasCoverage = true } = options;
 
   const lang: DetectedLanguage = {
-    language: "typescript",
+    language: "python",
+    projectPath: ".",
     confidence: "high",
-    markers: ["tsconfig.json"],
+    markers: ["pyproject.toml"],
+          buildSystem: "hatch",
   };
 
   return {
@@ -31,10 +33,10 @@ function createReport(options: {
     metrics: {
       typeStrictness: new Map([
         [
-          "typescript",
+          "python",
           {
             metric: "type_strictness",
-            tool: "tsc",
+            tool: "pyrefly",
             value: typeErrors,
             success: true,
           },
@@ -42,10 +44,10 @@ function createReport(options: {
       ]),
       lintErrors: new Map([
         [
-          "typescript",
+          "python",
           {
             metric: "lint_errors",
-            tool: "eslint",
+            tool: "ruff",
             value: lintErrors,
             success: true,
           },
@@ -53,10 +55,10 @@ function createReport(options: {
       ]),
       coverage: new Map([
         [
-          "typescript",
+          "python",
           {
             metric: "test_coverage",
-            tool: "c8",
+            tool: "pytest-cov",
             value: hasCoverage ? coverage : -1,
             success: hasCoverage,
           },

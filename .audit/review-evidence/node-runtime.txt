@@ -1,0 +1,1 @@
+btar requires Bun 1.4.4 or newer. Run bun dist/cli.js or use the Bun-linked btar command.

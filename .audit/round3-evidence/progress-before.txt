@@ -1,0 +1,38 @@
+$ bun --bun run vitest run src/core/progress.test.ts
+
+ RUN  v3.2.4 /home/dscv/Repo/btar
+
+ ❯ src/core/progress.test.ts (2 tests | 1 failed) 217ms
+   × progress error routing > prints an error once with quiet=false 148ms
+     → expected [ 'btar-error-sentinel', …(1) ] to have a length of 1 but got 2
+   ✓ progress error routing > prints an error once with quiet=true 67ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/core/progress.test.ts > progress error routing > prints an error once with quiet=false
+AssertionError: expected [ 'btar-error-sentinel', …(1) ] to have a length of 1 but got 2
+
+- Expected
++ Received
+
+- 1
++ 2
+
+ ❯ src/core/progress.test.ts:13:75
+     11|     });
+     12|     expect(result.status).toBe(0);
+     13|     expect((result.stdout + result.stderr).match(/btar-error-sentinel/…
+       |                                                                           ^
+     14|     expect(quiet ? result.stdout : result.stderr).toBe("");
+     15|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed (2)
+   Start at  13:36:32
+   Duration  364ms (transform 24ms, setup 0ms, collect 15ms, tests 217ms, environment 0ms, prepare 32ms)
+
+error: "vitest" exited with code 1
+error: script "test" exited with code 1

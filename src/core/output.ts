@@ -16,6 +16,7 @@ export interface LanguageOutput {
   language: SupportedLanguage;
   confidence: "high" | "medium" | "low";
   markers: string[];
+  projectPath: string;
 }
 
 /**
@@ -26,6 +27,7 @@ export interface MetricOutput {
   tool: string;
   value: number;
   success: boolean;
+  error?: string;
 }
 
 /**
@@ -55,6 +57,7 @@ export interface RecommendationOutput {
 export interface FormatJsonOptions {
   /** Quality gate threshold (if set, gateResult will be included) */
   failUnder?: number;
+  ratchetFailure?: boolean;
   /** Recommendations to include in output */
   recommendations?: Recommendation[];
 }
@@ -93,11 +96,19 @@ export interface AnalysisOutput {
   recommendations: RecommendationOutput[];
 }
 
-/**
- * Convert Map<SupportedLanguage, MetricResult> to Record<string, MetricOutput>
- */
+export function safeMetricError(result: MetricResult): string {
+  switch (result.diagnostic) {
+    case "consent-required": return "Project execution requires --trust-project. Hatch configuration and tests can execute code with your privileges.";
+    case "unsupported-python": return "Python 3.14+ is required in the project's Hatch environment.";
+    case "runtime-unavailable": return "The Hatch Python runtime check failed. Verify Hatch and the project environment.";
+    case "timeout": return "The check exceeded its time limit.";
+    case "invalid-report": return "The check did not produce a valid report.";
+    default: return "The check failed. Run the tool directly in a trusted project to inspect its output.";
+  }
+}
+
 function mapToRecord(
-  map: Map<SupportedLanguage, MetricResult>
+  map: Map<string, MetricResult>
 ): Record<string, MetricOutput> {
   const record: Record<string, MetricOutput> = {};
   for (const [lang, result] of map) {
@@ -106,6 +117,7 @@ function mapToRecord(
       tool: result.tool,
       value: result.value,
       success: result.success,
+      ...(!result.success ? { error: safeMetricError(result) } : {}),
     };
   }
   return record;
@@ -153,6 +165,7 @@ export function formatAsJson(
       language: l.language,
       confidence: l.confidence,
       markers: l.markers,
+      projectPath: l.projectPath,
     })),
     metrics: {
       typeStrictness: mapToRecord(report.metrics.typeStrictness),
@@ -175,9 +188,10 @@ export function formatAsJson(
   };
 
   // Add gate result if threshold was specified
-  if (options?.failUnder !== undefined) {
-    output.gateResult =
-      scoreResult.score >= options.failUnder ? "passed" : "failed";
+  if (options?.failUnder !== undefined || options?.ratchetFailure !== undefined) {
+    const measurements = [...report.metrics.typeStrictness.values(), ...report.metrics.lintErrors.values(), ...report.metrics.coverage.values()];
+    const complete = report.languages.length > 0 && measurements.length === report.languages.length * 3 && measurements.every((result) => result.success);
+    output.gateResult = complete && !options.ratchetFailure && scoreResult.score >= (options.failUnder ?? 0) ? "passed" : "failed";
   }
 
   return JSON.stringify(output, null, 2);
