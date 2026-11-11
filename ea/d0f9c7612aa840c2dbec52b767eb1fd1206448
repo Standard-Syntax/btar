@@ -1,0 +1,64 @@
+.audit/review-evidence/timeout-after.txt
+  s_c8f412ab765fbd::t_37a498f2b48e9f 1-12
+.audit/review-evidence/python.txt
+  s_c8f412ab765fbd::t_37a498f2b48e9f 1-38
+docs/runtime.md
+  s_c8f412ab765fbd::t_763442439fb1fa 1-42
+  s_c8f412ab765fbd::t_65b8c8a25fc4a8 43
+.audit/review-evidence/timeout-before.txt
+  s_c8f412ab765fbd::t_37a498f2b48e9f 1-40
+src/commands/analyze.ts
+  s_c8f412ab765fbd::t_65b8c8a25fc4a8 107,111-112,121
+  s_c8f412ab765fbd::t_e3b718a0f9198a 13,27,87,96,120,122-123,131-138,141,165-166,171,173,234,237
+src/core/output.ts
+  s_c8f412ab765fbd::t_e3b718a0f9198a 19,99-109,111,120,168
+src/core/context/agents-md.test.ts
+  s_c8f412ab765fbd::t_b76f70ffdca33b 21-34
+src/core/metrics/runner.test.ts
+  s_c8f412ab765fbd::t_7ad8b66fa51f38 25-36
+src/cli.ts
+  s_c8f412ab765fbd::t_e3b718a0f9198a 34,68
+  s_c8f412ab765fbd::t_763442439fb1fa 73-76
+src/core/scoring.ts
+  s_c8f412ab765fbd::t_e3b718a0f9198a 143-145
+src/commands/init-ci.ts
+  s_c8f412ab765fbd::t_763442439fb1fa 35-36,78
+  s_c8f412ab765fbd::t_8d91792bbf886f 34
+.audit/review-evidence/tests.txt
+  s_c8f412ab765fbd::t_37a498f2b48e9f 1-86
+.audit/review-evidence/node-runtime.txt
+  s_c8f412ab765fbd::t_37a498f2b48e9f 1
+src/core/remediation/fixer.ts
+  s_c8f412ab765fbd::t_e3b718a0f9198a 9
+src/commands/fix.ts
+  s_c8f412ab765fbd::t_e3b718a0f9198a 18,33-37,76,82-83,93
+  s_c8f412ab765fbd::t_65b8c8a25fc4a8 80,90,103
+.audit/review-evidence/build.txt
+  s_c8f412ab765fbd::t_37a498f2b48e9f 1-5
+scripts/verify-python.ts
+  s_c8f412ab765fbd::t_e3b718a0f9198a 32
+.audit/review-repairs.md
+  s_c8f412ab765fbd::t_37a498f2b48e9f 1-42
+src/commands/init-ci.test.ts
+  s_c8f412ab765fbd::t_763442439fb1fa 14-17
+src/cli.test.ts
+  s_c8f412ab765fbd::t_b18339524775ce 2,6,17-31,44,52,54-58,61,67,72,77,89-90,93-111,131,139-169
+src/core/metrics/runner.ts
+  s_c8f412ab765fbd::t_fe5e8a3ed74165 84,86-92,94
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ead0f9c7612aa840c2dbec52b767eb1fd1206448",
+  "prompts": {},
+  "sessions": {
+    "s_c8f412ab765fbd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1caff-ef88-7872-98e4-2238c8c20012",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Derek Vitrano <derek.vitrano@gmail.com>"
+    }
+  }
+}
