@@ -1,0 +1,38 @@
+src/commands/fix.ts
+  s_c8f412ab765fbd::t_fa0a5afe376ad6 93
+.pre-commit-config.yaml
+  s_c8f412ab765fbd::t_fa0a5afe376ad6 2-13
+src/build-portability.test.ts
+  s_c8f412ab765fbd::t_fa0a5afe376ad6 1-20
+src/repository-hooks.test.ts
+  s_c8f412ab765fbd::t_fa0a5afe376ad6 1-19
+src/core/progress.tsx
+  s_c8f412ab765fbd::t_fa0a5afe376ad6 53-54
+src/core/progress.test.ts
+  s_c8f412ab765fbd::t_e118960500aace 1-16
+.claude/settings.json
+  s_c8f412ab765fbd::t_fa0a5afe376ad6 5
+src/cli.test.ts
+  s_c8f412ab765fbd::t_fa0a5afe376ad6 28
+  s_c8f412ab765fbd::t_47723a93bc2f5d 71-78
+package.json
+  s_c8f412ab765fbd::t_fa0a5afe376ad6 11
+scripts/make-cli-executable.ts
+  s_c8f412ab765fbd::t_fa0a5afe376ad6 1-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d38d9d520d8e51032022a4aee8f5dbcce21512ff",
+  "prompts": {},
+  "sessions": {
+    "s_c8f412ab765fbd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1caff-ef88-7872-98e4-2238c8c20012",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Derek Vitrano <derek.vitrano@gmail.com>"
+    }
+  }
+}
