@@ -69,18 +69,31 @@ export async function runTool(options: RunToolOptions): Promise<ToolResult> {
   return new Promise((resolve) => {
     let stdout = "";
     let stderr = "";
-    let timedOut = false;
+    let childExited = false;
 
     const child = spawn(executable, args, {
       cwd,
       stdio: ["ignore", "pipe", "pipe"],
       shell: false,
+      detached: process.platform !== "win32",
     });
 
-    // Handle timeout
+    child.on("exit", () => { childExited = true; });
+
     const timeoutId = setTimeout(() => {
-      timedOut = true;
-      child.kill("SIGKILL");
+      if (!childExited && child.pid !== undefined) {
+        if (process.platform === "win32") {
+          // taskkill is Windows' built-in process-tree termination facility.
+          const killer = spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore", windowsHide: true });
+          killer.on("error", () => { child.kill("SIGKILL"); });
+          killer.unref();
+        } else {
+          try { process.kill(-child.pid, "SIGKILL"); } catch { child.kill("SIGKILL"); }
+        }
+      }
+      child.stdout.destroy();
+      child.stderr.destroy();
+      resolve({ stdout, stderr, exitCode: -1, timedOut: true });
     }, timeout);
 
     // Capture stdout
@@ -102,8 +115,8 @@ export async function runTool(options: RunToolOptions): Promise<ToolResult> {
       resolve({
         stdout,
         stderr,
-        exitCode: timedOut ? -1 : (code ?? 1),
-        timedOut,
+        exitCode: code ?? 1,
+        timedOut: false,
       });
     });
 
