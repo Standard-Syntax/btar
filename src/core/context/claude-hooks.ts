@@ -22,7 +22,7 @@ export function generateClaudeHooks(options: ClaudeHooksOptions): ClaudeHooksCon
   }
   const hooks: ClaudeHook[] = [];
   if (options.enablePostCommit !== false) {
-    hooks.push({ type: "command", command: `btar analyze ${shellQuote(options.projectPath)} --json` });
+    hooks.push({ type: "command", command: `btar analyze ${shellQuote(options.projectPath)} --json --trust-project` });
   }
   for (const command of options.customCommands ?? []) hooks.push({ type: "command", command });
   if (hooks.length > 0) config.hooks.PostToolUse = [{ matcher, hooks }];

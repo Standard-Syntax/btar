@@ -12,3 +12,19 @@ describe("generateAgentsMd", () => {
     expect(content).not.toContain("npm");
   });
 });
+
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { validateAgentsMd } from "./agents-md.js";
+
+it("recognizes alternative headings and ignores fenced headings", async () => {
+  const root = mkdtempSync(join(tmpdir(), "btar-headings-"));
+  const file = join(root, "AGENTS.md");
+  try {
+    writeFileSync(file, "## Setup\n## Tests\n## Conventions\n");
+    expect((await validateAgentsMd(file)).issues).toEqual([]);
+    writeFileSync(file, "```md\n## Build\n## Testing\n## Code Style\n```\n");
+    expect((await validateAgentsMd(file)).issues).toHaveLength(3);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});

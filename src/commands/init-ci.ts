@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 export function normalizeBaseBranch(baseBranch = "main"): string {
@@ -72,6 +72,35 @@ workflows:
 `;
 }
 
+const REQUIRED_TOOLS = ["ruff", "pyrefly", "pytest", "pytest-cov", "diff-cover", "semgrep"];
+
+function hatchDependencies(path: string): string[] {
+  try {
+    const parsed: unknown = Bun.TOML.parse(readFileSync(path, "utf-8"));
+    if (typeof parsed !== "object" || parsed === null || !("tool" in parsed)) return [];
+    const tool = parsed.tool;
+    if (typeof tool !== "object" || tool === null || !("hatch" in tool)) return [];
+    const hatch = tool.hatch;
+    if (typeof hatch !== "object" || hatch === null || !("envs" in hatch)) return [];
+    const envs = hatch.envs;
+    if (typeof envs !== "object" || envs === null || !("default" in envs)) return [];
+    const env = envs.default;
+    if (typeof env !== "object" || env === null || !("dependencies" in env)) return [];
+    return Array.isArray(env.dependencies) ? env.dependencies.filter((entry): entry is string => typeof entry === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function missingHatchTools(path: string): string[] {
+  const dependencies = hatchDependencies(path);
+  const names = dependencies.map((entry) => {
+    if (entry.includes(";")) return undefined;
+    return entry.match(/^\s*([a-zA-Z0-9][a-zA-Z0-9._-]*)(?:\s*(?:[<>=!~]|@).*)?\s*$/)?.[1].toLowerCase().replaceAll("_", "-").replaceAll(".", "-");
+  });
+  return REQUIRED_TOOLS.filter((tool) => !names.includes(tool));
+}
+
 export async function initCiCommand(options: { directory?: string; force?: boolean; threshold?: number; baseBranch?: string } = {}): Promise<void> {
   const targetDirectory = options.directory ?? process.cwd();
   const directory = join(targetDirectory, ".circleci");
@@ -81,7 +110,14 @@ export async function initCiCommand(options: { directory?: string; force?: boole
     process.exitCode = 1;
     return;
   }
+  const missing = missingHatchTools(join(targetDirectory, "pyproject.toml"));
+  if (missing.length > 0) {
+    console.error(`Missing Hatch default environment dependencies: ${missing.join(", ")}. Generate and merge the python-toolchain configuration into pyproject.toml first.`);
+    process.exitCode = 1;
+    return;
+  }
+  const config = generateCircleCiConfig(options.threshold, options.baseBranch);
   mkdirSync(directory, { recursive: true });
-  writeFileSync(destination, generateCircleCiConfig(options.threshold, options.baseBranch));
+  writeFileSync(destination, config);
   console.log(`Created CircleCI configuration: ${destination}`);
 }

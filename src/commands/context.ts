@@ -208,6 +208,9 @@ generateCommand
       if (options?.pre !== false) hooks.push("PreToolUse");
       if (options?.post !== false) hooks.push("PostToolUse");
       console.log(`Hooks: ${hooks.join(", ")}`);
+      if (options?.post !== false) {
+        console.log("Post-tool analysis trusts and executes the project's Hatch environment.");
+      }
     }
   );
 
@@ -219,13 +222,15 @@ generateCommand
   .action(async (directory?: string, options?: { output?: string; force?: boolean }) => {
     const dir = resolve(directory ?? ".");
     const projectFile = join(dir, "pyproject.toml");
-    const defaultOutput = existsSync(projectFile) ? join(dir, "pyproject.btar.toml") : projectFile;
+    const hasPackaging = [projectFile, join(dir, "setup.py"), join(dir, "setup.cfg")].some(existsSync);
+    const defaultOutput = hasPackaging ? join(dir, "pyproject.btar.toml") : projectFile;
     const outputPath = resolve(options?.output ?? defaultOutput);
     if (existsSync(outputPath) && !options?.force) {
       console.error(`File already exists: ${outputPath}\nUse --force to overwrite.`);
       process.exitCode = 1;
       return;
     }
+    mkdirSync(dirname(outputPath), { recursive: true });
     writeFileSync(outputPath, generatePythonToolchainConfig(), "utf-8");
     if (outputPath.endsWith("pyproject.btar.toml")) {
       console.log(`Generated merge candidate: ${outputPath}`);
