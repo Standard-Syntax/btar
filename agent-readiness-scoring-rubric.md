@@ -7,12 +7,12 @@ Record the assessed commit, command exit codes, report paths, and CI run links i
 | Category | Points | Evidence |
 | --- | ---: | --- |
 | Fast and reliable CircleCI feedback | 20 | Recent green runs, elapsed time, and rerun rate |
-| Pyrefly and Ruff | 20 | `hatch run pyrefly check` and `hatch run ruff check .` exit cleanly |
+| Pyrefly and Ruff | 20 | `hatch run pyrefly check`, `hatch run ruff check .`, and `hatch run ruff format --check .` exit cleanly |
 | pytest and pytest-cov | 20 | `hatch run pytest --cov --cov-report=json:coverage.json` exits zero and produces a fresh, non-empty, valid report |
 | Security and change checks | 15 | Gitleaks and Semgrep exit zero with no findings; diff-cover exits zero at the required threshold |
 | Hypothesis coverage | 10 | Important invariants have property-based tests |
 | Hatch and Python 3.14 contract | 10 | `requires-python >=3.14` and documented environments |
-| Agent context | 5 | AGENTS.md states build, test, lint, and CI commands |
+| Agent context | 5 | AGENTS.md states build, test, lint, runtime constraints, and handoff checks |
 
 ## Allocate points
 
@@ -24,7 +24,7 @@ Each component awards its full stated value or zero. Do not interpolate or award
 - **Security and change checks, 15 points.** Award 5 points for a successful Gitleaks CI scan with no findings. Award 5 points for a successful Semgrep CI scan using the project's rules with `--error --strict` and no findings. Award 5 points for a successful diff-cover CI check against the intended base with `--fail-under` set to the project's required threshold, 70 percent by default in generated CI. Record the configured threshold and base. Findings, command failures, and unmet thresholds earn zero for the affected component and block acceptance regardless of the total score.
 - **Hypothesis coverage, 10 points.** Before scoring, list the project's core invariants and the Hypothesis tests that exercise each one. Award 5 points when every listed invariant has a corresponding property-based test. Award another 5 points when those tests run and pass. An empty inventory or no property-based tests earns zero.
 - **Hatch and Python contract, 10 points.** Award 5 points when project metadata declares `requires-python = ">=3.14"` or a stricter compatible minimum. Award 5 points when the documented Hatch environment starts successfully, reports Python 3.14 or newer, and provides the documented verification dependencies. For a non-package repository, the environment must use `skip-install = true`.
-- **Agent context, 5 points.** Award 1 point each when AGENTS.md documents a working build command, test command, lint command, CI command, and project constraints. A project with no build step must explicitly say so to earn that point. Verify commands from a clean checkout.
+- **Agent context, 5 points.** Award 1 point each when AGENTS.md documents a working build command, test command, lint command, language and runtime constraints, and verification commands to run before handing off a change. Handoff commands must include type and security checks. These requirements match the guidance produced by `btar context generate agents-md`. A project with no build step must explicitly say so to earn that point. Verify commands from a clean checkout. Score CI workflow evidence separately under CircleCI feedback.
 
 ## Assessment worksheet
 
