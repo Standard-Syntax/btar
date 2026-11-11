@@ -1,0 +1,19 @@
+agent-readiness-scoring-rubric.md
+  s_dfc2c439d3375e::t_a1b97a13f2030d 10,15,27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7b62260aac9909a6f77a31658ef8b4d433219d86",
+  "prompts": {},
+  "sessions": {
+    "s_dfc2c439d3375e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cc4f-2841-7ca2-8351-47314a9a3189",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Derek Vitrano <derek.vitrano@gmail.com>"
+    }
+  }
+}
