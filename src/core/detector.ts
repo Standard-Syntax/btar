@@ -24,32 +24,41 @@ export function detectBuildSystem(directory: string): BuildSystem {
   } catch { return "legacy-python"; }
 }
 
-function detectInDirectory(directory: string, root: string, config: BTARConfig): DetectedLanguage | undefined {
+function detectInDirectory(directory: string, root: string, config: BTARConfig, allowScripts: boolean): DetectedLanguage | undefined {
   let files: string[];
   try { files = readdirSync(directory, { withFileTypes: true }).filter((entry) => entry.isFile()).map((entry) => entry.name); } catch { return undefined; }
+  const projectPath = relative(root, directory).split("\\").join("/") || ".";
   for (const confidence of ["high", "medium"] as const) {
     const markers = confidence === "high" ? LANGUAGE_MARKERS.python.primary : LANGUAGE_MARKERS.python.secondary;
     const marker = markers.find((file) => files.includes(file) && !shouldExclude(join(directory, file), root, config.exclude));
-    if (marker) return { language: "python", confidence, markers: [relative(root, join(directory, marker))], buildSystem: detectBuildSystem(directory) };
+    if (marker) return { language: "python", projectPath, confidence, markers: [relative(root, join(directory, marker))], buildSystem: detectBuildSystem(directory) };
   }
-  if (files.some((file) => file.endsWith(".py") && !shouldExclude(join(directory, file), root, config.exclude))) {
-    return { language: "python", confidence: "medium", markers: [relative(root, directory) || "."], buildSystem: detectBuildSystem(directory) };
+  if (allowScripts && files.some((file) => file.endsWith(".py") && !shouldExclude(join(directory, file), root, config.exclude))) {
+    return { language: "python", projectPath, confidence: "medium", markers: [relative(root, directory) || "."], buildSystem: detectBuildSystem(directory) };
   }
   return undefined;
 }
 
 export async function detectLanguages(directory: string, config: BTARConfig): Promise<DetectedLanguage[]> {
   if (!existsSync(directory)) return [];
-  const root = detectInDirectory(directory, directory, config);
-  if (root) return [root];
-  try {
-    for (const entry of readdirSync(directory, { withFileTypes: true })) {
-      if (!entry.isDirectory() || [".git", ".venv", "build", "dist", "node_modules", "vendor"].includes(entry.name)) continue;
-      const child = join(directory, entry.name);
-      if (shouldExclude(child, directory, config.exclude)) continue;
-      const detected = detectInDirectory(child, directory, config);
-      if (detected) return [{ ...detected, buildSystem: detectBuildSystem(directory) }];
-    }
-  } catch { return []; }
-  return [];
+  const projects: DetectedLanguage[] = [];
+  const pending = [{ directory, insideProject: false }];
+  while (pending.length > 0) {
+    const current = pending.pop();
+    if (!current) break;
+    const detected = detectInDirectory(current.directory, directory, config, !current.insideProject);
+    if (detected) projects.push(detected);
+    try {
+      const children = readdirSync(current.directory, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory() && ![".git", ".venv", "__pycache__", "build", "dist", "node_modules", "vendor"].includes(entry.name))
+        .sort((a, b) => b.name.localeCompare(a.name));
+      for (const entry of children) {
+        const child = join(current.directory, entry.name);
+        if (!shouldExclude(child, directory, config.exclude)) {
+          pending.push({ directory: child, insideProject: current.insideProject || detected !== undefined });
+        }
+      }
+    } catch { continue; }
+  }
+  return projects;
 }
