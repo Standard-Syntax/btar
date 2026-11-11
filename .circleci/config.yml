@@ -3,9 +3,12 @@ version: 2.1
 jobs:
   verify:
     docker:
-      - image: oven/bun:1.4.4
+      - image: cimg/python:3.14.10
     steps:
       - checkout
+      - run:
+          name: Install Bun 1.4.4
+          command: .circleci/install-bun.sh
       - run:
           name: Install dependencies
           command: bun install --frozen-lockfile
@@ -27,7 +30,26 @@ jobs:
       - store_artifacts:
           path: coverage
 
+  python-integration:
+    docker:
+      - image: cimg/python:3.14.10
+    steps:
+      - checkout
+      - run:
+          name: Install Bun 1.4.4
+          command: .circleci/install-bun.sh
+      - run:
+          name: Install Hatch
+          command: python -m pip install --user hatch==1.16.5
+      - run:
+          name: Install dependencies
+          command: bun install --frozen-lockfile
+      - run:
+          name: Verify Python integration
+          command: bun run verify:python
+
 workflows:
   verify:
     jobs:
       - verify
+      - python-integration
