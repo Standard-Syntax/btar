@@ -49,12 +49,12 @@ describe("Ratchet Mode", () => {
 
   describe("loadRatchetScore", () => {
     it("returns null when .btar-score file does not exist", async () => {
-      const result = await loadRatchetScore(testDir);
-      expect(result).toBeNull();
+      expect(await loadRatchetScore(testDir)).toBeNull();
     });
 
     it("loads valid .btar-score file", async () => {
       const state: RatchetState = {
+        schemaVersion: 1, analysisScope: "python-3.14-pyrefly-ruff-pytest-cov-v1", projectPaths: ["."],
         score: 75,
         timestamp: "2026-01-15T10:00:00.000Z",
         breakdown: {
@@ -73,22 +73,20 @@ describe("Ratchet Mode", () => {
       expect(result!.breakdown.typeStrictness).toBe(22);
     });
 
-    it("returns null for invalid JSON in .btar-score", async () => {
+    it("rejects invalid JSON in .btar-score", async () => {
       await writeFile(join(testDir, ".btar-score"), "not valid json {{{");
 
-      const result = await loadRatchetScore(testDir);
-      expect(result).toBeNull();
+      await expect(loadRatchetScore(testDir)).rejects.toThrow(/malformed/);
     });
 
-    it("returns null for .btar-score with missing required fields", async () => {
+    it("rejects .btar-score with missing required fields", async () => {
       // Missing score field
       await writeFile(join(testDir, ".btar-score"), JSON.stringify({ timestamp: "2026-01-15" }));
 
-      const result = await loadRatchetScore(testDir);
-      expect(result).toBeNull();
+      await expect(loadRatchetScore(testDir)).rejects.toThrow(/malformed/);
     });
 
-    it("returns null for .btar-score with invalid score type", async () => {
+    it("rejects .btar-score with invalid score type", async () => {
       await writeFile(
         join(testDir, ".btar-score"),
         JSON.stringify({
@@ -98,8 +96,54 @@ describe("Ratchet Mode", () => {
         })
       );
 
-      const result = await loadRatchetScore(testDir);
-      expect(result).toBeNull();
+      await expect(loadRatchetScore(testDir)).rejects.toThrow(/malformed/);
+    });
+  });
+
+  describe("baseline compatibility", () => {
+    it("rejects an unversioned legacy score with an actionable error", async () => {
+      await writeFile(join(testDir, ".btar-score"), JSON.stringify({
+        score: 75, timestamp: "2026-01-15T10:00:00.000Z",
+        breakdown: { typeStrictness: 22, lintErrors: 23, coverage: 30 },
+      }));
+      await expect(loadRatchetScore(testDir)).rejects.toThrow(/--save-baseline/);
+    });
+
+    it("binds a score to canonical project paths and rejects changed scopes", async () => {
+      await saveRatchetScore(testDir, createScoreResult(75), ["packages/b", "packages/a", "packages/a/."]);
+      const baseline = await loadRatchetScore(testDir, ["packages/a", "packages/b"]);
+      expect(baseline?.projectPaths).toEqual(["packages/a", "packages/b"]);
+      await expect(loadRatchetScore(testDir, ["packages/a"])).rejects.toThrow(/--save-baseline/);
+    });
+
+    it("rejects project paths outside the analysis root", async () => {
+      await expect(saveRatchetScore(testDir, createScoreResult(75), ["../other"])).rejects.toThrow(/outside/);
+    });
+
+    it("rejects invalid scores, components and timestamps", async () => {
+      await saveRatchetScore(testDir, createScoreResult(75));
+      const path = join(testDir, ".btar-score");
+      const valid = JSON.parse(await readFile(path, "utf-8"));
+      for (const invalid of [
+        { ...valid, score: 101 },
+        { ...valid, score: -1 },
+        { ...valid, timestamp: "2026-02-30T10:00:00.000Z" },
+        { ...valid, breakdown: { ...valid.breakdown, typeStrictness: 31 } },
+        { ...valid, breakdown: { ...valid.breakdown, lintErrors: -1 } },
+        { ...valid, breakdown: { ...valid.breakdown, coverage: 41 } },
+      ]) {
+        await writeFile(path, JSON.stringify(invalid));
+        await expect(loadRatchetScore(testDir)).rejects.toThrow(/malformed/);
+      }
+    });
+
+    it("rejects a different scoring contract", async () => {
+      await saveRatchetScore(testDir, createScoreResult(75));
+      const path = join(testDir, ".btar-score");
+      const state = JSON.parse(await readFile(path, "utf-8"));
+      state.analysisScope = "multilingual";
+      await writeFile(path, JSON.stringify(state));
+      await expect(loadRatchetScore(testDir)).rejects.toThrow(/--save-baseline/);
     });
   });
 
@@ -152,6 +196,7 @@ describe("Ratchet Mode", () => {
 
   describe("checkRatchetRegression", () => {
     const baseline: RatchetState = {
+        schemaVersion: 1, analysisScope: "python-3.14-pyrefly-ruff-pytest-cov-v1", projectPaths: ["."],
       score: 70,
       timestamp: "2026-01-15T10:00:00.000Z",
       breakdown: {
@@ -214,6 +259,7 @@ describe("Ratchet Mode", () => {
   describe("RatchetResult structure", () => {
     it("contains passed, message, and delta", () => {
       const baseline: RatchetState = {
+        schemaVersion: 1, analysisScope: "python-3.14-pyrefly-ruff-pytest-cov-v1", projectPaths: ["."],
         score: 70,
         timestamp: "2026-01-15T10:00:00.000Z",
         breakdown: { typeStrictness: 21, lintErrors: 21, coverage: 28 },
@@ -233,6 +279,7 @@ describe("Ratchet Mode", () => {
   describe("edge cases", () => {
     it("handles score of 0", () => {
       const baseline: RatchetState = {
+        schemaVersion: 1, analysisScope: "python-3.14-pyrefly-ruff-pytest-cov-v1", projectPaths: ["."],
         score: 10,
         timestamp: "2026-01-15T10:00:00.000Z",
         breakdown: { typeStrictness: 3, lintErrors: 3, coverage: 4 },
@@ -246,6 +293,7 @@ describe("Ratchet Mode", () => {
 
     it("handles score of 100", () => {
       const baseline: RatchetState = {
+        schemaVersion: 1, analysisScope: "python-3.14-pyrefly-ruff-pytest-cov-v1", projectPaths: ["."],
         score: 95,
         timestamp: "2026-01-15T10:00:00.000Z",
         breakdown: { typeStrictness: 29, lintErrors: 29, coverage: 37 },
@@ -259,6 +307,7 @@ describe("Ratchet Mode", () => {
 
     it("handles baseline score of 0", () => {
       const baseline: RatchetState = {
+        schemaVersion: 1, analysisScope: "python-3.14-pyrefly-ruff-pytest-cov-v1", projectPaths: ["."],
         score: 0,
         timestamp: "2026-01-15T10:00:00.000Z",
         breakdown: { typeStrictness: 0, lintErrors: 0, coverage: 0 },
