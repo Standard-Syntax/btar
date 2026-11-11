@@ -85,9 +85,7 @@ export async function analyzeCommand(
     const languages = await detectLanguages(resolvedDir, config);
 
     if (languages.length === 0) progress.info("No Python code detected");
-
-    const languageNames = languages.map((l) => l.language).join(", ");
-    progress.success(`Found: ${languageNames}`);
+    else progress.success(`Found: ${languages.map((l) => l.language).join(", ")}`);
 
     // Run metrics (no progress callback in JSON mode)
     const report = await runAllMetrics({
@@ -115,7 +113,7 @@ export async function analyzeCommand(
     const scoreResult = calculateScore(report);
 
     // Generate recommendations
-    const recommendations = generateRecommendations(scoreResult, report);
+    const recommendations = languages.length === 0 ? [] : generateRecommendations(scoreResult, report);
 
     const projectPaths = languages.map((project) => project.projectPath);
     const complete = languages.length > 0 && measurements.length === languages.length * 3 && failedMeasurements.length === 0;
@@ -138,7 +136,7 @@ export async function analyzeCommand(
       if (!baseline && !ratchetFailure) {
         ratchetFailure = true;
         ratchetMessage = "No baseline found. Run with --save-baseline first to enable ratchet mode.";
-      } else if (baseline) {
+      } else if (baseline && complete) {
         const ratchetResult = checkRatchetRegression(scoreResult, baseline);
         if (!ratchetResult.passed) {
           ratchetFailure = true;
@@ -163,7 +161,8 @@ export async function analyzeCommand(
         })
       );
       if (!complete) {
-        console.error(options.trustProject === true ? "BTAR verification incomplete." : "Project execution requires --trust-project. Hatch configuration and tests can execute code with your privileges.");
+        console.error(languages.length === 0 ? "BTAR verification incomplete: no Python code detected." : options.trustProject === true ? "BTAR verification incomplete." : "Project execution requires --trust-project. Hatch configuration and tests can execute code with your privileges.");
+        if (ratchetFailure) console.error(ratchetMessage);
         process.exitCode = 1;
         return;
       }
@@ -172,6 +171,13 @@ export async function analyzeCommand(
         process.exitCode = 1;
         return;
       }
+      return;
+    }
+
+    if (languages.length === 0) {
+      progress.error("BTAR verification incomplete: no Python code detected");
+      if (ratchetFailure) progress.error(ratchetMessage);
+      process.exitCode = 1;
       return;
     }
 
@@ -232,10 +238,12 @@ export async function analyzeCommand(
 
     // Quality gate enforcement
     if (!complete) {
-      progress.error(`BTAR verification incomplete: ${failedMeasurements.map((m) => m.tool).join(", ")}`);
+      const reason = failedMeasurements.map((m) => m.tool).join(", ") || "measurements missing";
+      progress.error(`BTAR verification incomplete: ${reason}`);
       for (const result of failedMeasurements) {
         progress.info(`${result.tool}: ${safeMetricError(result)}`);
       }
+      if (ratchetFailure) progress.error(ratchetMessage);
       process.exitCode = 1;
       return;
     }

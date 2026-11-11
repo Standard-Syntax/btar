@@ -70,7 +70,14 @@ program
     await fixCommand(directory, options);
   });
 
-if (typeof Bun === "undefined") {
+const bunVersion = typeof Bun === "undefined" ? null : /^(\d+)\.(\d+)\.(\d+)(?:\+.*)?$/.exec(Bun.version);
+const supportedBun = bunVersion !== null && (
+  Number(bunVersion[1]) > 1 ||
+  (Number(bunVersion[1]) === 1 && (Number(bunVersion[2]) > 4 ||
+    (Number(bunVersion[2]) === 4 && Number(bunVersion[3]) >= 4)))
+);
+
+if (!supportedBun) {
   console.error("btar requires Bun 1.4.4 or newer. Run bun dist/cli.js or use the Bun-linked btar command.");
   process.exitCode = 1;
 } else program.parseAsync(process.argv).catch((error) => {
