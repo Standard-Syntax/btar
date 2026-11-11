@@ -50,8 +50,8 @@ export function createProgressReporter(options: ProgressOptions = {}): ProgressR
     start: (message): void => append(`${SYMBOLS.progress} ${message}`),
     success: (message): void => append(`${SYMBOLS.success} ${message}`, "success"),
     error(message): void {
-      process.stderr.write(`${SYMBOLS.error} ${message}\n`);
-      append(`${SYMBOLS.error} ${message}`, "error");
+      if (options.quiet) process.stderr.write(`${SYMBOLS.error} ${message}\n`);
+      else append(`${SYMBOLS.error} ${message}`, "error");
     },
     info: (message): void => append(`${SYMBOLS.info} ${message}`),
     metric(name, tool, value, success): void {

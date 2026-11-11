@@ -90,7 +90,7 @@ export async function fixCommand(
         progress.success(`${lang.projectPath}: ${result.message}${fileInfo}`);
       } else {
         hasFailures = true;
-        progress.error(`${lang.projectPath}: Ruff fix failed. Run Ruff directly in the trusted project for details.`);
+        progress.error(`${lang.projectPath}: ${result.message}`);
       }
     }
 
