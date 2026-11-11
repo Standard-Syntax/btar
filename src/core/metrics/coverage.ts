@@ -12,6 +12,9 @@ export function parsePytestCoverageJson(stdout: string, _stderr: string, exitCod
   try {
     const report: unknown = JSON.parse(stdout);
     if (!report || typeof report !== "object" || !("totals" in report) || !report.totals || typeof report.totals !== "object" || !("percent_covered" in report.totals)) return -1;
+    if (!("files" in report) || !report.files || typeof report.files !== "object" || Array.isArray(report.files)) return -1;
+    const files = Object.entries(report.files);
+    if (files.length === 0 || files.some(([name, file]) => !name || !file || typeof file !== "object" || Array.isArray(file))) return -1;
     const value = report.totals.percent_covered;
     return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 100 ? value : -1;
   } catch { return -1; }

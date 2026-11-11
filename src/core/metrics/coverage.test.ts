@@ -21,7 +21,7 @@ afterEach(() => {
 
 describe.skipIf(process.platform === "win32")("measureCoverage invocation", () => {
   it("executes Hatch in the target directory and consumes its output", async () => {
-    process.env.BTAR_OUTPUT = "{\"totals\":{\"percent_covered\":87.5}}";
+    process.env.BTAR_OUTPUT = "{\"files\":{\"sample.py\":{}},\"totals\":{\"percent_covered\":87.5}}";
     process.env.BTAR_STATUS = "0";
     const result = await measureCoverage("python", root);
     expect(result.success).toBe(true);
@@ -54,7 +54,12 @@ describe.skipIf(process.platform === "win32")("measureCoverage invocation", () =
 
 describe("pytest-cov metrics", () => {
   it("uses pytest-cov through Hatch", () => expect(COVERAGE_TOOLS.python.command).toEqual(["hatch", "run", "pytest", "--cov", "--cov-report=json:coverage.json", "-q"]));
-  it("reads the reported percentage", () => expect(parsePytestCoverageJson('{"totals":{"percent_covered":87.5}}', "", 0)).toBe(87.5));
+  it("reads the reported percentage", () => expect(parsePytestCoverageJson('{"files":{"sample.py":{"executed_lines":[1],"summary":{"covered_lines":1,"num_statements":1,"percent_covered":87.5},"missing_lines":[],"excluded_lines":[]}},"totals":{"percent_covered":87.5}}', "", 0)).toBe(87.5));
+  it("rejects reports without a nonempty files object", () => {
+    for (const files of [undefined, {}, [], null, "invalid", { "sample.py": null }, { "sample.py": [] }, { "": {} }]) {
+      expect(parsePytestCoverageJson(JSON.stringify({ files, totals: { percent_covered: 100 } }), "", 0)).toBe(-1);
+    }
+  });
   it("rejects missing or unsuccessful evidence", () => {
     expect(parsePytestCoverageJson("{}", "", 0)).toBe(-1);
     expect(parsePytestCoverageJson('{"totals":{"percent_covered":80}}', "", 1)).toBe(-1);

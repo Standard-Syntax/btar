@@ -55,6 +55,9 @@ describe("Pyrefly metrics", () => {
     expect(TYPE_CHECKER_TOOLS.python.command).toEqual(["hatch", "run", "pyrefly", "check", "--output-format=json"]);
     expect(parsePyreflyErrors('{"errors":[{"severity":"error"},{"severity":"warning"}]}', "", 1)).toBe(1);
   });
+  it("accepts a clean successful check", () => {
+    expect(parsePyreflyErrors('{"errors":[]}', "", 0)).toBe(0);
+  });
   it("rejects an unsuccessful check without diagnostic evidence", () => {
     expect(parsePyreflyErrors('{"errors":[]}', "", 1)).toBe(-1);
   });
