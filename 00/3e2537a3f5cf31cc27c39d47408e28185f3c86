@@ -1,0 +1,33 @@
+.audit/review-round3.md
+  s_c8f412ab765fbd::t_55482937b38164 1-39
+.audit/round3-evidence/circleci-validation.txt
+  s_c8f412ab765fbd::t_36d00d6c39c15a 1
+.audit/round3-evidence/container.txt
+  s_c8f412ab765fbd::t_5874748c974f0a 1-222
+.audit/round3-evidence/hygiene.txt
+  s_c8f412ab765fbd::t_b94ed6afe8bfc6 1-46
+.audit/round3-evidence/progress-before.txt
+  s_c8f412ab765fbd::t_16c5bcc79fd259 1-38
+.audit/round3-evidence/python-host.txt
+  s_c8f412ab765fbd::t_6b39fadeda40eb 1-38
+.audit/round3-evidence/tests.txt
+  s_c8f412ab765fbd::t_a406d76258220f 1-90
+docs/runtime.md
+  s_c8f412ab765fbd::t_54c84541315ef4 44-47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "003e2537a3f5cf31cc27c39d47408e28185f3c86",
+  "prompts": {},
+  "sessions": {
+    "s_c8f412ab765fbd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1caff-ef88-7872-98e4-2238c8c20012",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Derek Vitrano <derek.vitrano@gmail.com>"
+    }
+  }
+}
