@@ -1,0 +1,33 @@
+src/core/metrics/coverage.test.ts
+  s_c8f412ab765fbd::t_dc1abfade2b277 58,60-62
+  s_c8f412ab765fbd::t_8f3877100c0118 24,57,59
+src/core/remediation/fixer.ts
+  s_c8f412ab765fbd::t_583d95c2dbec8e 19
+src/core/metrics/index.test.ts
+  s_c8f412ab765fbd::t_8f3877100c0118 38
+src/core/remediation/fixer.test.ts
+  s_c8f412ab765fbd::t_dc1abfade2b277 43-44,46
+  s_c8f412ab765fbd::t_583d95c2dbec8e 45
+src/core/metrics/coverage.ts
+  s_c8f412ab765fbd::t_8f3877100c0118 15-17
+src/core/metrics/type-checker.test.ts
+  s_c8f412ab765fbd::t_dc1abfade2b277 58-60
+src/core/detector.test.ts
+  s_c8f412ab765fbd::t_dc1abfade2b277 77-86
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7b266863d18542a24c1129f95b753d9a6f6ac23a",
+  "prompts": {},
+  "sessions": {
+    "s_c8f412ab765fbd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1caff-ef88-7872-98e4-2238c8c20012",
+        "model": "gpt-6.1-terra"
+      },
+      "human_author": "Derek Vitrano <derek.vitrano@gmail.com>"
+    }
+  }
+}
