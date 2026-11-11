@@ -32,6 +32,8 @@ dependencies = [
   "pytest>=9.2.0",
   "pytest-cov>=7.1.0",
   "ruff>=0.17.4",
+  "semgrep>=1.185.0",
+  "diff-cover>=11.0.1",
 ]
 ```
 
@@ -55,40 +57,49 @@ def test_sort_preserves_length(values: list[int]) -> None:
 
 Install the official Gitleaks binary for local secret scans. The generated CircleCI job downloads it and verifies its checksum. Semgrep and diff-cover are installed by the generated Hatch profile.
 
+## Allow project execution
+
+Use `--trust-project` only for repositories whose Hatch configuration, dependencies, and tests you trust to execute with your privileges. Analysis and fixes require that flag on each invocation. Detection alone does not execute project code. Generated Claude hooks explicitly opt into execution and belong only in trusted repositories.
+
 ## Analyze the repository
 
 ```bash
-btar analyze .
-btar analyze . --json
-btar analyze . --fail-under 70
+btar analyze . --trust-project
+btar analyze . --trust-project --json
+btar analyze . --trust-project --fail-under 70
 ```
 
 BTAR scores Pyrefly errors, Ruff errors, and pytest-cov coverage. It exits with failure when it cannot obtain a valid measurement. A score is not a substitute for the checks themselves.
 
-Save an approved score, then enforce it on later changes.
+Save an approved score, then enforce it on later changes. Baselines include the Python scoring scope and relative project paths. Legacy baselines and changed project sets are incompatible until deliberately replaced.
 
 ```bash
-btar analyze . --save-baseline
+btar analyze . --trust-project --save-baseline
 git add .btar-score
 git commit -m "Add BTAR baseline"
-btar analyze . --ratchet
+btar analyze . --trust-project --ratchet
 ```
 
 ## Generate repository guidance and CI
 
 ```bash
+btar context generate python-toolchain .
+```
+
+Merge any generated candidate into pyproject.toml, preserving existing metadata. Then generate the remaining support files.
+
+```bash
 btar context generate agents-md .
 btar context generate pre-commit .
 btar context generate hooks .
-btar context generate python-toolchain .
 btar init-ci
 ```
 
-The Python toolchain generator writes `pyproject.toml` when the project has none. For an existing project, it writes `pyproject.btar.toml` as a merge candidate unless you pass an explicit output path. The CircleCI generator writes `.circleci/config.yml`. The configuration runs the Python checks through Hatch, then runs Gitleaks, Semgrep, and diff-cover. Use `btar init-ci . --threshold 80` to require 80 percent changed-line coverage. Review generated files before committing them. Use `--force` only when intentionally replacing an existing generated file.
+The Python toolchain generator writes `pyproject.toml` when the project has no project or legacy packaging metadata. For an existing `pyproject.toml`, `setup.py`, or `setup.cfg`, it writes `pyproject.btar.toml` as a merge candidate unless you pass an explicit output path. Merge the toolchain candidate first. The CircleCI generator validates the required Hatch dependency declarations before writing `.circleci/config.yml`. The configuration runs the Python checks through Hatch, then runs Gitleaks, Semgrep, and diff-cover. Use `btar init-ci . --threshold 80` to require 80 percent changed-line coverage. Review generated files before committing them. Use `--force` only when intentionally replacing an existing generated file.
 
 ## Work with findings
 
-Run `btar fix .` to apply Ruff fixes offered by the project. Review the diff and run the full verification sequence. BTAR does not automatically repair type errors, test failures, security findings, or insufficient changed-line coverage.
+Run `btar fix . --trust-project` to apply Ruff fixes offered by the project. Review the diff and run the full verification sequence. BTAR does not automatically repair type errors, test failures, security findings, or insufficient changed-line coverage.
 
 ## Maintain BTAR
 

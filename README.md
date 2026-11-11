@@ -29,14 +29,18 @@ export PATH="$(bun pm bin -g):$PATH"
 
 `btar` is then available in your shell. The `PATH` entry selects Bun's local link when an older installation exists elsewhere in `PATH`. Run `bun unlink` in this repository to remove the local link.
 
+## Execution consent
+
+Analysis and fixes execute project-controlled Hatch configuration, plugins, dependencies, and tests with your privileges. Add `--trust-project` only after deciding the project is trusted. Without that flag BTAR reads project metadata but does not run Hatch or tests. This consent does not provide a sandbox. See [runtime and execution rules](docs/runtime.md).
+
 ## Analyze a Python project
 
 ```bash
-btar analyze .
-btar analyze . --json
-btar analyze . --fail-under 70
-btar analyze . --save-baseline
-btar analyze . --ratchet
+btar analyze . --trust-project
+btar analyze . --trust-project --json
+btar analyze . --trust-project --fail-under 70
+btar analyze . --trust-project --save-baseline
+btar analyze . --trust-project --ratchet
 ```
 
 `--json` is for automation. A missing tool, failed command, malformed report, or empty coverage report causes a nonzero exit. BTAR never treats unavailable evidence as a clean result.
@@ -44,18 +48,23 @@ btar analyze . --ratchet
 ## Generate project files
 
 ```bash
-btar init-ci
 btar context generate python-toolchain .
+```
+
+Merge any generated candidate into pyproject.toml, preserving existing metadata. Then generate CI and agent guidance.
+
+```bash
+btar init-ci
 btar context generate agents-md .
 btar context generate pre-commit .
 btar context generate hooks .
 ```
 
-The generated CircleCI file uses Python 3.14 and runs Hatch checks for types, lint, tests with coverage, Semgrep, and diff-cover, plus a separate Gitleaks job. Use `btar init-ci . --threshold 80` to require 80 percent changed-line coverage from diff-cover. Generation refuses to overwrite an existing file unless you pass `--force`.
+`init-ci` validates the required Hatch default-environment dependencies before writing its output. Generate and merge the toolchain configuration first. The generated CircleCI file uses Python 3.14 and runs Hatch checks for types, lint, tests with coverage, Semgrep, and diff-cover, plus a separate Gitleaks job. Use `btar init-ci . --threshold 80` to require 80 percent changed-line coverage from diff-cover. Generation refuses to overwrite an existing file unless you pass `--force`.
 
 ## Prepare a project
 
-BTAR expects a Hatch-managed project. Run `btar context generate python-toolchain .` to create a profile. If `pyproject.toml` already exists, BTAR writes `pyproject.btar.toml` as a merge candidate unless you select an explicit output path. Add the resulting development dependencies to the target project's `pyproject.toml`.
+BTAR expects a Hatch-managed project. Run `btar context generate python-toolchain .` to create a profile. If `pyproject.toml`, `setup.py`, or `setup.cfg` already exists, BTAR writes `pyproject.btar.toml` as a merge candidate unless you select an explicit output path. Add the resulting development dependencies to the target project's `pyproject.toml`.
 
 ```toml
 [tool.hatch.envs.default]
@@ -66,10 +75,14 @@ dependencies = [
   "pytest>=9.2.0",
   "pytest-cov>=7.1.0",
   "ruff>=0.17.4",
+  "semgrep>=1.185.0",
+  "diff-cover>=11.0.1",
 ]
 ```
 
 The generated profile includes Semgrep and diff-cover in Hatch. Install the official Gitleaks binary separately for local secret scans. Generated CI provisions Gitleaks and verifies its download checksum. See the generated CircleCI configuration for the full command sequence.
+
+Baselines now record a versioned Python scoring scope and canonical project paths. Legacy baselines and changed project sets require deliberate replacement with `--save-baseline`.
 
 ## Score
 
