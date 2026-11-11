@@ -41,3 +41,7 @@ btar init-ci /path/to/project
 ## Timeout boundaries
 
 On POSIX systems BTAR terminates the spawned process group on timeout and closes its capture pipes so analysis settles. A process that deliberately escapes the group can survive. The Windows process-tree cleanup path has not been verified in this run.
+
+## Generated pre-commit hooks
+
+The generated root Pyrefly hook uses Hatch only when the repository root is detected as a Hatch project. Legacy Python repositories and repositories containing only nested Hatch projects omit that root hook. Adopt and configure Hatch before adding a root Hatch typecheck hook. Ruff and security hooks remain available for legacy repositories.

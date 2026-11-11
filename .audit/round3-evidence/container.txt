@@ -1,0 +1,222 @@
+/usr/bin/git
+/tmp/tmp.PbRNY7fBcH/bun.zip: OK
+1.4.4
+Collecting hatch==1.16.5
+  Downloading hatch-1.16.5-py3-none-any.whl.metadata (5.7 kB)
+Requirement already satisfied: click>=8.0.6 in /home/circleci/.local/lib/python3.14/site-packages (from hatch==1.16.5) (8.5.0)
+Collecting hatchling>=1.27.0 (from hatch==1.16.5)
+  Downloading hatchling-1.33.0-py3-none-any.whl.metadata (3.9 kB)
+Collecting httpx>=0.22.0 (from hatch==1.16.5)
+  Downloading httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+Collecting hyperlink>=21.0.0 (from hatch==1.16.5)
+  Downloading hyperlink-21.0.0-py2.py3-none-any.whl.metadata (1.5 kB)
+Collecting keyring>=23.5.0 (from hatch==1.16.5)
+  Using cached keyring-25.7.0-py3-none-any.whl.metadata (21 kB)
+Requirement already satisfied: packaging>=24.2 in /home/circleci/.pyenv/versions/3.14.10/lib/python3.14/site-packages (from hatch==1.16.5) (26.3)
+Collecting pexpect~=4.8 (from hatch==1.16.5)
+  Downloading pexpect-4.9.0-py2.py3-none-any.whl.metadata (2.5 kB)
+Requirement already satisfied: platformdirs>=2.5.0 in /home/circleci/.pyenv/versions/3.14.10/lib/python3.14/site-packages (from hatch==1.16.5) (4.13.5)
+Collecting pyproject-hooks (from hatch==1.16.5)
+  Using cached pyproject_hooks-1.3.3-py3-none-any.whl.metadata (1.3 kB)
+Requirement already satisfied: python-discovery>=1.1 in /home/circleci/.pyenv/versions/3.14.10/lib/python3.14/site-packages (from hatch==1.16.5) (1.6.4)
+Collecting rich>=11.2.0 (from hatch==1.16.5)
+  Downloading rich-15.0.0-py3-none-any.whl.metadata (18 kB)
+Collecting shellingham>=1.4.0 (from hatch==1.16.5)
+  Using cached shellingham-1.5.4-py2.py3-none-any.whl.metadata (3.5 kB)
+Collecting tomli-w>=1.0 (from hatch==1.16.5)
+  Downloading tomli_w-1.2.0-py3-none-any.whl.metadata (5.7 kB)
+Collecting tomlkit>=0.11.1 (from hatch==1.16.5)
+  Using cached tomlkit-0.15.2-py3-none-any.whl.metadata (3.4 kB)
+Requirement already satisfied: userpath~=1.7 in /home/circleci/.local/lib/python3.14/site-packages (from hatch==1.16.5) (1.9.2)
+Collecting uv>=0.5.23 (from hatch==1.16.5)
+  Downloading uv-0.13.7-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (11 kB)
+Requirement already satisfied: virtualenv>=21 in /home/circleci/.pyenv/versions/3.14.10/lib/python3.14/site-packages (from hatch==1.16.5) (21.14.13)
+Collecting ptyprocess>=0.5 (from pexpect~=4.8->hatch==1.16.5)
+  Downloading ptyprocess-0.7.0-py2.py3-none-any.whl.metadata (1.3 kB)
+Collecting pathspec>=0.10.1 (from hatchling>=1.27.0->hatch==1.16.5)
+  Downloading pathspec-1.1.1-py3-none-any.whl.metadata (14 kB)
+Collecting pluggy>=1.0.0 (from hatchling>=1.27.0->hatch==1.16.5)
+  Downloading pluggy-1.7.0-py3-none-any.whl.metadata (5.0 kB)
+Collecting trove-classifiers (from hatchling>=1.27.0->hatch==1.16.5)
+  Using cached trove_classifiers-2026.9.21.13-py3-none-any.whl.metadata (2.4 kB)
+Collecting anyio (from httpx>=0.22.0->hatch==1.16.5)
+  Downloading anyio-4.16.0-py3-none-any.whl.metadata (4.7 kB)
+Requirement already satisfied: certifi in /home/circleci/.pyenv/versions/3.14.10/lib/python3.14/site-packages (from httpx>=0.22.0->hatch==1.16.5) (2026.10.23)
+Collecting httpcore==1.* (from httpx>=0.22.0->hatch==1.16.5)
+  Downloading httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+Collecting idna (from httpx>=0.22.0->hatch==1.16.5)
+  Using cached idna-3.20-py3-none-any.whl.metadata (7.2 kB)
+Collecting h11>=0.16 (from httpcore==1.*->httpx>=0.22.0->hatch==1.16.5)
+  Using cached h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+Collecting SecretStorage>=3.2 (from keyring>=23.5.0->hatch==1.16.5)
+  Using cached secretstorage-3.5.0-py3-none-any.whl.metadata (4.0 kB)
+Collecting jeepney>=0.4.2 (from keyring>=23.5.0->hatch==1.16.5)
+  Using cached jeepney-0.9.0-py3-none-any.whl.metadata (1.2 kB)
+Collecting jaraco.classes (from keyring>=23.5.0->hatch==1.16.5)
+  Using cached jaraco.classes-3.4.0-py3-none-any.whl.metadata (2.6 kB)
+Collecting jaraco.functools (from keyring>=23.5.0->hatch==1.16.5)
+  Using cached jaraco_functools-4.6.0-py3-none-any.whl.metadata (2.9 kB)
+Collecting jaraco.context (from keyring>=23.5.0->hatch==1.16.5)
+  Using cached jaraco_context-6.1.2-py3-none-any.whl.metadata (4.2 kB)
+Requirement already satisfied: filelock>=3.16.1 in /home/circleci/.pyenv/versions/3.14.10/lib/python3.14/site-packages (from python-discovery>=1.1->hatch==1.16.5) (4.2.4)
+Collecting markdown-it-py>=2.2.0 (from rich>=11.2.0->hatch==1.16.5)
+  Downloading markdown_it_py-4.3.0-py3-none-any.whl.metadata (7.9 kB)
+Collecting pygments<3.0.0,>=2.13.0 (from rich>=11.2.0->hatch==1.16.5)
+  Downloading pygments-2.21.0-py3-none-any.whl.metadata (2.5 kB)
+Collecting mdurl~=0.1 (from markdown-it-py>=2.2.0->rich>=11.2.0->hatch==1.16.5)
+  Downloading mdurl-0.1.2-py3-none-any.whl.metadata (1.6 kB)
+Collecting cryptography>=2.0 (from SecretStorage>=3.2->keyring>=23.5.0->hatch==1.16.5)
+  Using cached cryptography-50.0.2-cp311-abi3-manylinux_2_34_x86_64.whl.metadata (4.4 kB)
+Collecting cffi>=2.0.0 (from cryptography>=2.0->SecretStorage>=3.2->keyring>=23.5.0->hatch==1.16.5)
+  Using cached cffi-2.1.1-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (2.5 kB)
+Collecting pycparser (from cffi>=2.0.0->cryptography>=2.0->SecretStorage>=3.2->keyring>=23.5.0->hatch==1.16.5)
+  Using cached pycparser-3.12-py3-none-any.whl.metadata (9.7 kB)
+Requirement already satisfied: distlib<1,>=0.4.3 in /home/circleci/.pyenv/versions/3.14.10/lib/python3.14/site-packages (from virtualenv>=21->hatch==1.16.5) (0.4.4)
+Collecting typing_extensions>=4.16.0 (from anyio->httpx>=0.22.0->hatch==1.16.5)
+  Using cached typing_extensions-4.16.0-py3-none-any.whl.metadata (3.3 kB)
+Collecting more-itertools (from jaraco.classes->keyring>=23.5.0->hatch==1.16.5)
+  Using cached more_itertools-11.2.1-py3-none-any.whl.metadata (42 kB)
+Downloading hatch-1.16.5-py3-none-any.whl (141 kB)
+Downloading pexpect-4.9.0-py2.py3-none-any.whl (63 kB)
+Downloading hatchling-1.33.0-py3-none-any.whl (78 kB)
+Downloading httpx-0.28.1-py3-none-any.whl (73 kB)
+Downloading httpcore-1.0.9-py3-none-any.whl (78 kB)
+Using cached h11-0.16.0-py3-none-any.whl (37 kB)
+Downloading hyperlink-21.0.0-py2.py3-none-any.whl (74 kB)
+Using cached idna-3.20-py3-none-any.whl (69 kB)
+Using cached keyring-25.7.0-py3-none-any.whl (39 kB)
+Using cached jeepney-0.9.0-py3-none-any.whl (49 kB)
+Downloading pathspec-1.1.1-py3-none-any.whl (57 kB)
+Downloading pluggy-1.7.0-py3-none-any.whl (27 kB)
+Downloading ptyprocess-0.7.0-py2.py3-none-any.whl (13 kB)
+Downloading rich-15.0.0-py3-none-any.whl (310 kB)
+Downloading pygments-2.21.0-py3-none-any.whl (1.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.3/1.3 MB 852.8 kB/s  0:00:01
+Downloading markdown_it_py-4.3.0-py3-none-any.whl (96 kB)
+Downloading mdurl-0.1.2-py3-none-any.whl (10.0 kB)
+Using cached secretstorage-3.5.0-py3-none-any.whl (15 kB)
+Using cached cryptography-50.0.2-cp311-abi3-manylinux_2_34_x86_64.whl (4.8 MB)
+Using cached cffi-2.1.1-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (221 kB)
+Using cached shellingham-1.5.4-py2.py3-none-any.whl (9.8 kB)
+Downloading tomli_w-1.2.0-py3-none-any.whl (6.7 kB)
+Using cached tomlkit-0.15.2-py3-none-any.whl (52 kB)
+Downloading uv-0.13.7-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (17.2 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 17.2/17.2 MB 1.4 MB/s  0:00:12
+Downloading anyio-4.16.0-py3-none-any.whl (134 kB)
+Using cached typing_extensions-4.16.0-py3-none-any.whl (45 kB)
+Using cached jaraco.classes-3.4.0-py3-none-any.whl (6.8 kB)
+Using cached jaraco_context-6.1.2-py3-none-any.whl (7.9 kB)
+Using cached jaraco_functools-4.6.0-py3-none-any.whl (11 kB)
+Using cached more_itertools-11.2.1-py3-none-any.whl (74 kB)
+Using cached pycparser-3.12-py3-none-any.whl (62 kB)
+Using cached pyproject_hooks-1.3.3-py3-none-any.whl (10 kB)
+Using cached trove_classifiers-2026.9.21.13-py3-none-any.whl (14 kB)
+Installing collected packages: trove-classifiers, ptyprocess, uv, typing_extensions, tomlkit, tomli-w, shellingham, pyproject-hooks, pygments, pycparser, pluggy, pexpect, pathspec, more-itertools, mdurl, jeepney, jaraco.context, idna, h11, markdown-it-py, jaraco.functools, jaraco.classes, hyperlink, httpcore, hatchling, cffi, anyio, rich, httpx, cryptography, SecretStorage, keyring, hatch
+
+Successfully installed SecretStorage-3.5.0 anyio-4.16.0 cffi-2.1.1 cryptography-50.0.2 h11-0.16.0 hatch-1.16.5 hatchling-1.33.0 httpcore-1.0.9 httpx-0.28.1 hyperlink-21.0.0 idna-3.20 jaraco.classes-3.4.0 jaraco.context-6.1.2 jaraco.functools-4.6.0 jeepney-0.9.0 keyring-25.7.0 markdown-it-py-4.3.0 mdurl-0.1.2 more-itertools-11.2.1 pathspec-1.1.1 pexpect-4.9.0 pluggy-1.7.0 ptyprocess-0.7.0 pycparser-3.12 pygments-2.21.0 pyproject-hooks-1.3.3 rich-15.0.0 shellingham-1.5.4 tomli-w-1.2.0 tomlkit-0.15.2 trove-classifiers-2026.9.21.13 typing_extensions-4.16.0 uv-0.13.7
+
+[notice] A new release of pip is available: 26.2.2 -> 26.3
+[notice] To update, run: pip install --upgrade pip
+bun install v1.4.4 (38afee6c8)
+
++ @eslint/js@9.39.2
++ @types/bun@1.4.4
++ @types/node@22.19.7
++ @types/react@19.3.0
++ @typescript-eslint/eslint-plugin@8.53.0
++ @typescript-eslint/parser@8.53.0
++ @vitest/coverage-v8@3.2.4
++ eslint@9.39.2
++ typescript@5.9.3
++ typescript-eslint@8.53.0
++ vitest@3.2.4
++ commander@12.1.0
++ ink@8.0.0
++ react@19.3.1
++ yaml@2.8.2
+
+237 packages installed [1.78s]
+$ tsc --noEmit -p tsconfig.check.json
+$ bun --bun run eslint src
+$ bun --bun run vitest run
+
+ RUN  v3.2.4 /tmp/btar
+
+ ✓ src/core/context/python-toolchain.test.ts (1 test) 4ms
+ ✓ src/core/scoring.test.ts (17 tests) 6ms
+ ✓ src/build-portability.test.ts (2 tests) 5ms
+ ✓ src/core/context/claude-hooks.test.ts (5 tests) 15ms
+ ✓ src/core/context/agents-md.test.ts (7 tests) 12ms
+ ✓ src/core/detector.test.ts (10 tests) 23ms
+ ✓ src/ci-config.test.ts (1 test) 18ms
+ ✓ src/repository-hooks.test.ts (2 tests) 16ms
+ ✓ src/core/remediation/ratchet.test.ts (23 tests) 29ms
+stderr | src/commands/init-ci.test.ts > requires declared Hatch tools before writing a workflow
+Missing Hatch default environment dependencies: ruff, pyrefly, pytest, pytest-cov, hypothesis, diff-cover, semgrep. Generate and merge the python-toolchain configuration into pyproject.toml first.
+
+stdout | src/commands/init-ci.test.ts > requires declared Hatch tools before writing a workflow
+Created CircleCI configuration: /tmp/btar-ci-cL5b0k/.circleci/config.yml
+
+stderr | src/commands/init-ci.test.ts > preserves an existing workflow when forced generation lacks prerequisites
+Missing Hatch default environment dependencies: ruff, pyrefly, pytest, pytest-cov, hypothesis, diff-cover, semgrep. Generate and merge the python-toolchain configuration into pyproject.toml first.
+
+ ✓ src/core/context/pre-commit.test.ts (5 tests) 40ms
+ ✓ src/core/config.test.ts (18 tests) 42ms
+ ✓ src/commands/init-ci.test.ts (8 tests) 81ms
+ ✓ src/core/remediation/fixer.test.ts (7 tests) 169ms
+ ✓ src/core/metrics/linter.test.ts (13 tests) 169ms
+ ✓ src/core/metrics/coverage.test.ts (8 tests) 170ms
+ ✓ src/core/metrics/type-checker.test.ts (7 tests) 168ms
+ ✓ src/core/metrics/index.test.ts (8 tests) 215ms
+ ✓ src/core/progress.test.ts (2 tests) 264ms
+ ✓ src/commands/context.test.ts (3 tests) 294ms
+ ✓ src/core/metrics/runner.test.ts (4 tests) 1868ms
+   ✓ runTool > times out a child and its pipe-holding descendant  854ms
+   ✓ runTool > terminates descendants after their Hatch-shaped parent exits  852ms
+ ✓ src/cli.test.ts (19 tests) 2854ms
+   ✓ local Bun CLI > keeps credential-like subprocess output out of reports and terminal errors  410ms
+   ✓ local Bun CLI > rejects legacy and changed-scope baselines until deliberately replaced  427ms
+
+ Test Files  21 passed (21)
+      Tests  170 passed (170)
+   Start at  19:41:04
+   Duration  3.06s (transform 676ms, setup 0ms, collect 1.60s, tests 6.46s, environment 6ms, prepare 862ms)
+
+$ bun run build && bun scripts/verify-python.ts
+$ bun build src/cli.ts src/index.ts --outdir dist --target bun --packages external && tsc --emitDeclarationOnly && bun scripts/make-cli-executable.ts
+Bundled 26 modules in 12ms
+
+  cli.js    59.54 KB  (entry point)
+  index.js  69 bytes  (entry point)
+
+Creating environment: default
+Checking dependencies
+Syncing dependencies
+
+
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 4 files tracked by git with 151 Code rules:
+  Scanning 1 file with 151 python rules.
+
+
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 0 (0 blocking)
+ • Rules run: 151
+ • Targets scanned: 1
+ • Parsed lines: ~100.0%
+ • Scan skipped:
+   ◦ Files matching .semgrepignore patterns: 2
+ • Scan was limited to files tracked by git
+ • For a detailed list of skipped files and lines, run semgrep with the --verbose flag
+Ran 151 rules on 1 file: 0 findings.
+(need more rules? `semgrep login` for additional free Semgrep Registry rules)
+
+If Semgrep missed a finding, please send us feedback to let us know!
+See https://semgrep.dev/docs/reporting-false-negatives/
+Python 3.14.10
+Verified the built Bun CLI, Hypothesis tests, changed-line coverage, and Semgrep Python scan.
