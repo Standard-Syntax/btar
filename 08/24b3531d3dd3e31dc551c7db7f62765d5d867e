@@ -1,0 +1,19 @@
+src/repository-hooks.test.ts
+  s_c8f412ab765fbd::t_2e5d818ac08fc1 10-14,16-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0824b3531d3dd3e31dc551c7db7f62765d5d867e",
+  "prompts": {},
+  "sessions": {
+    "s_c8f412ab765fbd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1caff-ef88-7872-98e4-2238c8c20012",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Derek Vitrano <derek.vitrano@gmail.com>"
+    }
+  }
+}
