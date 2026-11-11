@@ -1,0 +1,48 @@
+src/core/context/claude-hooks.ts
+  s_e724506ac85516::t_d7589de064e030 25
+src/core/context/claude-hooks.test.ts
+  s_e724506ac85516::t_1119b850ba70b7 46
+  s_e724506ac85516::t_78223a40dc964e 54-55
+  s_e724506ac85516::t_d7589de064e030 2-3,12,28,37,42-45,47-53
+src/commands/analyze.ts
+  s_e724506ac85516::t_688bc38d3a5eae 241
+  s_e724506ac85516::t_ec43350071d549 88,116,139,164-165,242,246
+  s_e724506ac85516::t_ea7ba1a9023ef3 177-183
+src/core/detector.test.ts
+  s_e724506ac85516::t_827fa30d446a55 51,65,72,94-100
+  s_e724506ac85516::t_78223a40dc964e 101-102
+src/core/detector.ts
+  s_e724506ac85516::t_665090c2149533 27,36,45,49-53,55-56,59,61
+docs/runtime.md
+  s_e724506ac85516::t_78223a40dc964e 46-49
+  s_e724506ac85516::t_8dcb75b75fc97e 28
+  s_e724506ac85516::t_d7589de064e030 15-17,20-21,37-38
+  s_e724506ac85516::t_304127704e42dd 45
+src/core/metrics/index.test.ts
+  s_e724506ac85516::t_4199077a4285e3 55
+src/cli.ts
+  s_e724506ac85516::t_ec43350071d549 73-80
+.audit/review-repairs.md
+  s_e724506ac85516::t_1119b850ba70b7 34
+src/cli.test.ts
+  s_e724506ac85516::t_fac0c2c226371f 69,196-198,207
+  s_e724506ac85516::t_56e0faf1811c53 48-50
+  s_e724506ac85516::t_9b3305118b0fbc 43-47,51-61,64-68,70-77
+  s_e724506ac85516::t_ea7ba1a9023ef3 62-63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f191570c6fd0d8aec7eeb3b134e1986cad624543",
+  "prompts": {},
+  "sessions": {
+    "s_e724506ac85516": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cc2d-70b1-7370-baf4-d3399fe16ea1",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Derek Vitrano <derek.vitrano@gmail.com>"
+    }
+  }
+}
