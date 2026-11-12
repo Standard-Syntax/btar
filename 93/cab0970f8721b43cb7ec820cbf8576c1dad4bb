@@ -1,0 +1,34 @@
+.agents/skills/verify-btar/PROOF.md
+  s_f06f8a46ec2c29::t_5bc9f79f86183b 3-23
+.agents/skills/verify-btar/SKILL.md
+  s_f06f8a46ec2c29::t_0181cb965eeac7 101
+  s_f06f8a46ec2c29::t_5bc9f79f86183b 142
+  s_f06f8a46ec2c29::t_604a91acd3f851 41-65,103,144,149
+.agents/skills/verify-btar/scripts/control.py
+  s_f06f8a46ec2c29::t_c4b6413f090528 127,141,152-155,157-158,160,162,165-166,179-183,186-195,199,203-206
+  s_f06f8a46ec2c29::t_0181cb965eeac7 198
+  s_f06f8a46ec2c29::t_0ffe590baf9e27 159,161
+.agents/skills/verify-btar/scripts/test_control.py
+  s_f06f8a46ec2c29::t_72af64cde99d05 13,55-67,113-115,121-122,124-125,131-132,134-137,144-162,164-185,187,189-193,211-225
+  s_f06f8a46ec2c29::t_0181cb965eeac7 186,188
+  s_f06f8a46ec2c29::t_5a96d25efe46cd 116-117,126-130,133,138-143,163,194-210
+  s_f06f8a46ec2c29::t_7b0b8c113da246 118-120,123,226
+.agents/skills/verify-btar/scripts/test_manual_cleanup.py
+  s_f06f8a46ec2c29::t_e2cd473ee697df 1-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "93cab0970f8721b43cb7ec820cbf8576c1dad4bb",
+  "prompts": {},
+  "sessions": {
+    "s_f06f8a46ec2c29": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cd79-48c0-7912-a624-14fd1cc911e0",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Derek Vitrano <derek.vitrano@gmail.com>"
+    }
+  }
+}
