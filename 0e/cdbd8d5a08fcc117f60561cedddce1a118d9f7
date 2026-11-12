@@ -1,0 +1,32 @@
+src/core/context/agents-md.ts
+  s_c9da14676fea1f::t_66cfd865dc3b18 16
+src/core/context/agents-md-bidi.test.ts
+  s_c9da14676fea1f::t_b4c35b55d8e623 17
+  s_c9da14676fea1f::t_e7b0ba6f138888 1-16,18-19
+src/core/context/repository-context-markers.test.ts
+  s_c9da14676fea1f::t_763f619c4b73dc 86,89-90
+  s_c9da14676fea1f::t_69465feab99a63 57-73,76-81
+  s_c9da14676fea1f::t_29994fa8dd46d4 87-88
+  s_c9da14676fea1f::t_960e40f26fbb7d 48-51,55-56,74-75,82-85
+  s_c9da14676fea1f::t_a559527493886e 52-54,92
+src/core/context/repository-context.ts
+  s_c9da14676fea1f::t_108d42b539c649 123-125,160
+  s_c9da14676fea1f::t_6ff32bd94a06a1 122
+  s_c9da14676fea1f::t_678934f37a795d 149
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0ecdbd8d5a08fcc117f60561cedddce1a118d9f7",
+  "prompts": {},
+  "sessions": {
+    "s_c9da14676fea1f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ce4d-f547-7110-b969-eabe21c052c7",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Derek Vitrano <derek.vitrano@gmail.com>"
+    }
+  }
+}
