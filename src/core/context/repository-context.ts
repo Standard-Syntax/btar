@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { closeSync, constants, existsSync, fstatSync, lstatSync, openSync, readFileSync, readSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { loadRatchetScore } from "../remediation/ratchet.js";
 import type { DetectedLanguage } from "../types.js";
@@ -20,26 +20,52 @@ function record(value: unknown): value is Record<string, unknown> {
 }
 
 function hatchScripts(directory: string): Record<string, unknown> {
-  try {
-    const pyproject = join(directory, "pyproject.toml");
-    const parsed: unknown = existsSync(pyproject) ? Bun.TOML.parse(readFileSync(pyproject, "utf8")) : {};
-    let hatch: unknown = record(parsed) && record(parsed.tool) ? parsed.tool.hatch : undefined;
-    const standalone = join(directory, "hatch.toml");
-    if (existsSync(standalone)) {
-      const value: unknown = Bun.TOML.parse(readFileSync(standalone, "utf8"));
-      if (record(value) && "envs" in value) hatch = value;
+  const parse = (path: string): unknown => {
+    try { return Bun.TOML.parse(readFileSync(path, "utf8")); }
+    catch (error) {
+      if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+        try { lstatSync(path); }
+        catch (statError) {
+          if (statError instanceof Error && "code" in statError && statError.code === "ENOENT") return {};
+        }
+      }
+      throw new Error(`Cannot read or parse ${path}: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
     }
-    if (!record(hatch) || !record(hatch.envs) || !record(hatch.envs.default) || !record(hatch.envs.default.scripts)) return {};
-    return hatch.envs.default.scripts;
-  } catch { return {}; }
+  };
+  const parsed = parse(join(directory, "pyproject.toml"));
+  let hatch: unknown = record(parsed) && record(parsed.tool) ? parsed.tool.hatch : undefined;
+  const standalone = parse(join(directory, "hatch.toml"));
+  if (record(standalone) && "envs" in standalone) hatch = standalone;
+  if (!record(hatch) || !record(hatch.envs) || !record(hatch.envs.default) || !record(hatch.envs.default.scripts)) return {};
+  return hatch.envs.default.scripts;
+}
+
+const MAX_REPORT_BYTES = 10 * 1024 * 1024;
+function readReport(path: string): Buffer {
+  const fd = openSync(path, constants.O_RDONLY | constants.O_NONBLOCK);
+  try {
+    const stat = fstatSync(fd);
+    if (!stat.isFile()) throw new Error(`Baseline report must be a regular file: ${path}`);
+    if (stat.size > MAX_REPORT_BYTES) throw new Error(`Baseline report exceeds size limit: ${path}`);
+    const buffer = Buffer.alloc(MAX_REPORT_BYTES + 1);
+    let length = 0;
+    while (length < buffer.length) {
+      const count = readSync(fd, buffer, length, buffer.length - length, null);
+      if (count === 0) break;
+      length += count;
+    }
+    if (length > MAX_REPORT_BYTES) throw new Error(`Baseline report exceeds size limit: ${path}`);
+    return buffer.subarray(0, length);
+  } finally { closeSync(fd); }
 }
 
 function parseReport(path: string, languages: DetectedLanguage[]): NonNullable<RepositoryAgentContext["report"]> {
-  const bytes = readFileSync(path);
+  const bytes = readReport(path);
   const data: unknown = JSON.parse(bytes.toString("utf8"));
   if (!record(data) || !Array.isArray(data.languages) || !record(data.metrics)) throw new Error("Invalid baseline report shape.");
   const expected = languages.map((language) => language.projectPath).sort();
   const roots = data.languages.map((entry: unknown) => record(entry) && entry.language === "python" && typeof entry.projectPath === "string" ? entry.projectPath : null);
+  if (new Set(roots).size !== roots.length) throw new Error("Duplicate baseline report project roots.");
   if (roots.some((root) => root === null) || JSON.stringify(roots.sort()) !== JSON.stringify(expected)) throw new Error("Baseline report project scope does not match detected projects.");
   const specs = [
     ["typeStrictness", "type_strictness", "pyrefly", "typeErrors"],
@@ -75,6 +101,8 @@ function parseReport(path: string, languages: DetectedLanguage[]): NonNullable<R
 }
 
 export async function inspectRepository(directory: string, languages: DetectedLanguage[], reportPath?: string, exclude: string[] = []): Promise<RepositoryAgentContext> {
+  const roots = languages.map((language) => language.projectPath);
+  if (new Set(roots).size !== roots.length) throw new Error("Duplicate detected project roots.");
   const projects = languages.map(({ projectPath }) => {
     const scripts = hatchScripts(resolve(directory, projectPath));
     const command = (name: string): string | undefined => typeof scripts[name] === "string" || (Array.isArray(scripts[name]) && scripts[name].length > 0 && scripts[name].every((item: unknown) => typeof item === "string")) ? `hatch run ${name}` : undefined;
@@ -93,18 +121,43 @@ const START = "<!-- BTAR:START -->";
 const END = "<!-- BTAR:END -->";
 function blockMarkers(content: string): { kind: string; index: number; length: number }[] {
   const markers: { kind: string; index: number; length: number }[] = [];
-  let fence: { character: string; length: number } | undefined;
-  for (const line of content.matchAll(/[^\n]+|\n/g)) {
-    const delimiter = line[0].match(/^ {0,3}(`{3,}|~{3,})/);
-    if (delimiter && (fence || delimiter[1][0] !== "`" || !line[0].slice(delimiter[0].length).includes("`"))) {
-      if (!fence) fence = { character: delimiter[1][0], length: delimiter[1].length };
-      else if (delimiter[1][0] === fence.character && delimiter[1].length >= fence.length && /^ {0,3}(?:`+|~+)\s*$/.test(line[0])) fence = undefined;
+  type Literal = { kind: "fence"; character: string; length: number } | { kind: "html"; end: RegExp };
+  let literal: Literal | undefined;
+  for (const line of content.matchAll(/[^\r\n]*(?:\r\n|\r|\n|$)/g)) {
+    if (!line[0]) continue;
+    const text = line[0].replace(/(?:\r\n|\r|\n)$/, "");
+    if (literal?.kind === "html") {
+      if (literal.end.test(text)) literal = undefined;
       continue;
     }
-    const marker = line[0].match(/^<!-- BTAR:(START|END) -->\r?$/);
-    if (!fence && marker) markers.push({ kind: marker[1], index: line.index, length: marker[0].replace(/\r$/, "").length });
+    const delimiter = text.match(/^ {0,3}(`{3,}|~{3,})/);
+    if (delimiter && (literal || delimiter[1][0] !== "`" || !text.slice(delimiter[0].length).includes("`"))) {
+      if (!literal) literal = { kind: "fence", character: delimiter[1][0], length: delimiter[1].length };
+      else if (delimiter[1][0] === literal.character && delimiter[1].length >= literal.length && /^ {0,3}(?:`+|~+)[ \t]*$/.test(text)) literal = undefined;
+      continue;
+    }
+    if (literal) continue;
+    const marker = text.match(/^<!-- BTAR:(START|END) -->$/);
+    if (marker) {
+      markers.push({ kind: marker[1], index: line.index, length: text.length });
+      continue;
+    }
+    if (/^[ \t]*<!--\s*BTAR\s*:/i.test(text) && !/-->[ \t]*\S/.test(text)) {
+      throw new Error("Malformed or duplicate BTAR managed block markers.");
+    }
+    let end: RegExp | undefined;
+    const rawTag = text.match(/^ {0,3}<(script|pre|style|textarea)(?:\s|>|$)/i);
+    if (rawTag) end = new RegExp(`</${rawTag[1]}>`, "i");
+    else if (/^ {0,3}<!--/.test(text)) end = /-->/;
+    else if (/^ {0,3}<\?/.test(text)) end = /\?>/;
+    else if (/^ {0,3}<!\[CDATA\[/.test(text)) end = /\]\]>/;
+    else if (/^ {0,3}<![A-Z]/.test(text)) end = />/;
+    else if (/^ {0,3}<\/?(?:address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(?=[\s/>]|$)/i.test(text) ||
+      /^ {0,3}<\/?[A-Za-z][\w-]*(?:\s+[^<>]*)?\s*\/?>[ \t]*$/.test(text)) end = /^[ \t]*$/;
+    if (end && !end.test(text)) literal = { kind: "html", end };
   }
-  if (fence) throw new Error("Cannot update context with an unclosed Markdown code fence.");
+  if (literal?.kind === "fence") throw new Error("Cannot update context with an unclosed Markdown code fence.");
+  if (literal?.kind === "html") throw new Error("Cannot update context with an unclosed Markdown HTML block.");
   return markers;
 }
 export function updateManagedBlock(existing: Buffer, generated: string): Buffer {

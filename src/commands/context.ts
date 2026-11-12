@@ -4,7 +4,7 @@
  */
 
 import { Command } from "commander";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve, basename, join, relative, sep } from "node:path";
 import { loadConfig } from "../core/config.js";
 import { detectLanguages } from "../core/detector.js";
@@ -12,7 +12,8 @@ import {
   validateAgentsMd,
   generateAgentsMd,
 } from "../core/context/agents-md.js";
-import { inspectRepository, updateManagedBlock } from "../core/context/repository-context.js";
+import { inspectRepository } from "../core/context/repository-context.js";
+import { writeAgentsFile } from "../core/context/agents-file.js";
 import { generatePreCommitConfig } from "../core/context/pre-commit.js";
 import { generatePythonToolchainConfig } from "../core/context/python-toolchain.js";
 import {
@@ -103,25 +104,17 @@ generateCommand
 
     // Generate AGENTS.md
     const projectName = basename(dir);
-    let content: string | Buffer;
     try {
       const context = await inspectRepository(dir, languages, options?.baselineReport, config.exclude);
       const repositoryRoot = relative(dirname(outputPath), dir).split(sep).join("/") || ".";
-      content = generateAgentsMd({ projectName, languages, context, repositoryRoot, buildCommand: options?.buildCommand, testCommand: options?.testCommand, lintCommand: options?.lintCommand });
-      if (options?.update && existsSync(outputPath)) content = updateManagedBlock(readFileSync(outputPath), content);
+      const content = generateAgentsMd({ projectName, languages, context, repositoryRoot, buildCommand: options?.buildCommand, testCommand: options?.testCommand, lintCommand: options?.lintCommand });
+      writeAgentsFile({ path: outputPath, generated: content, mode: options?.update ? "update" : options?.force ? "replace" : "create" });
     } catch (error) {
       console.error(`Cannot generate AGENTS.md: ${error instanceof Error ? error.message : String(error)}`);
       process.exitCode = 1;
       return;
     }
 
-    // Ensure output directory exists
-    const outputDir = dirname(outputPath);
-    if (!existsSync(outputDir)) {
-      mkdirSync(outputDir, { recursive: true });
-    }
-
-    writeFileSync(outputPath, content, "utf-8");
     console.log(`Generated: ${outputPath}`);
     console.log(`Languages: ${languages.map((l) => l.language).join(", ")}`);
   });

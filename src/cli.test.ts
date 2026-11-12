@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { resolve, join } from "node:path";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { generatePythonToolchainConfig } from "./core/context/python-toolchain.js";
 
 const roots: string[] = [];
@@ -182,6 +183,26 @@ describe("local Bun CLI", () => {
     expect(run(["context", "generate", "agents-md", root], tmpdir()).status).toBe(0);
     expect(readFileSync(join(root, "AGENTS.md"), "utf8")).toContain("hatch run pyrefly check");
   });
+  it("preserves instructions when Hatch configuration cannot be inspected", () => {
+    const root = repository();
+    const file = join(root, "AGENTS.md");
+    const original = "# Maintainer instructions\nKeep this file.\n";
+    writeFileSync(file, original);
+    writeFileSync(join(root, "hatch.toml"), "[broken\n");
+    const result = run(["context", "generate", "agents-md", root, "--update"], root);
+    expect(result.status).toBe(1);
+    expect(String(result.stderr)).toContain("hatch.toml");
+    expect(readFileSync(file, "utf8")).toBe(original);
+  });
+  it("rejects instruction line breaks in a detected project path", () => {
+    const root = repository(false);
+    const project = join(root, "project\n## injected instructions");
+    mkdirSync(project);
+    writeFileSync(join(project, "example.py"), "answer = 42\n");
+    const result = run(["context", "generate", "agents-md", root], root);
+    expect(result.status).toBe(1);
+    expect(existsSync(join(root, "AGENTS.md"))).toBe(false);
+  });
   it("anchors map links and command directories to a custom output", () => {
     const root = repository();
     writeFileSync(join(root, "README.md"), "# Project\n");
@@ -216,7 +237,8 @@ describe("local Bun CLI", () => {
     expect(run([...args, "--baseline-report", reportPath], root).status).toBe(0);
     const reported = readFileSync(destination, "utf8");
     expect(reported).toContain("type errors unavailable");
-    expect(reported).toContain("SHA256");
+    const reportHash = createHash("sha256").update(readFileSync(reportPath)).digest("hex");
+    expect(reported).toContain(`SHA256 \`${reportHash}\``);
     writeFileSync(reportPath, "{}");
     expect(run([...args, "--baseline-report", reportPath], root).status).toBe(1);
     expect(readFileSync(destination, "utf8")).toBe(reported);
@@ -235,6 +257,8 @@ describe("local Bun CLI", () => {
     const args = ["context", "generate", "agents-md", root, "--update"];
     expect(run(args, root).status).toBe(0);
     const updated = readFileSync(file);
+    expect(updated.toString("utf8")).toContain("## Repository map");
+    expect(updated.toString("utf8")).not.toContain("Old");
     expect(updated.subarray(0, prefix.length)).toEqual(prefix);
     expect(updated.subarray(-suffix.length)).toEqual(suffix);
     expect(run(args, root).status).toBe(0);
@@ -260,6 +284,22 @@ describe("local Bun CLI", () => {
     writeFileSync(file, unclosed);
     expect(run(args, root).status).toBe(1);
     expect(readFileSync(file, "utf8")).toBe(unclosed);
+  });
+  it("preserves raw HTML marker examples when updating CR-only guidance", () => {
+    const root = repository();
+    const file = join(root, "AGENTS.md");
+    const prefix = "<pre>\r<!-- BTAR:START -->\rExample instructions.\r<!-- BTAR:END -->\r</pre>\r\r";
+    const suffix = "\rMaintainer suffix.\r";
+    writeFileSync(file, `${prefix}<!-- BTAR:START -->\rOld\r<!-- BTAR:END -->${suffix}`);
+    const args = ["context", "generate", "agents-md", root, "--update"];
+    expect(run(args, root).status).toBe(0);
+    const updated = readFileSync(file, "utf8");
+    expect(updated.startsWith(prefix)).toBe(true);
+    expect(updated.endsWith(suffix)).toBe(true);
+    expect(updated).not.toContain("Old");
+    expect(updated).toContain("## Repository map");
+    expect(run(args, root).status).toBe(0);
+    expect(readFileSync(file, "utf8")).toBe(updated);
   });
   it("reports recorded issues, scope, and score evidence", () => {
     const root = repository();

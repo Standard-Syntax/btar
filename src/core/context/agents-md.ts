@@ -12,6 +12,23 @@ const REQUIRED_SECTIONS = [
   { label: "Code Style", pattern: /\b(code style|conventions|formatting)\b/i },
 ];
 
+function safeText(value: string): string {
+  if (Array.from(value).some((char) => { const code = char.codePointAt(0) ?? 0; return code < 32 || (code >= 127 && code <= 159) || code === 0x2028 || code === 0x2029; })) throw new Error("Repository context contains control characters.");
+  return value;
+}
+
+function markdownText(value: string): string {
+  return safeText(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replace(/[\\`*_{}[\]()#+!|~-]/g, "\\$&");
+}
+
+function codeSpan(value: string): string {
+  const text = safeText(value);
+  const longest = Math.max(0, ...Array.from(text.matchAll(/`+/g), (match) => match[0].length));
+  const delimiter = "`".repeat(longest + 1);
+  const padding = text.startsWith("`") || text.endsWith("`") || (text.startsWith(" ") && text.endsWith(" ")) ? " " : "";
+  return `${delimiter}${padding}${text}${padding}${delimiter}`;
+}
+
 export async function validateAgentsMd(filePath: string): Promise<AgentsMdValidation> {
   let content: string;
   try { content = readFileSync(filePath, "utf-8"); }
@@ -48,35 +65,35 @@ export function generateAgentsMd(options: AgentsMdOptions): string {
       const command = overrides[name] ?? project.commands[name];
       if (!command) return `- ${name}: NOT_RECORDED. Inspect project documentation and configuration.`;
       const source = overrides[name] !== undefined ? "user supplied" : "declared Hatch script";
-      return `- ${name}: \`${command.replaceAll("`", "\\`")}\` (${source}; unverified).`;
+      return `- ${name}: ${codeSpan(command)} (${source}; unverified).`;
     });
-    return `### Project \`${project.path}\`\n\nRun commands from this project directory, relative to the repository root identified above.\n${lines.join("\n")}`;
+    return `### Project ${codeSpan(project.path)}\n\nRun commands from this project directory, relative to the repository root identified above.\n${lines.join("\n")}`;
   }).join("\n\n");
   const score = context?.score;
   const scoreText = score?.kind === "recorded"
-    ? `Recorded score: ${score.score}/100, saved ${score.timestamp} in .btar-score.`
+    ? `Recorded score: ${score.score}/100, saved ${markdownText(score.timestamp)} in .btar-score.`
     : score?.kind === "invalid" ? "INVALID or incompatible .btar-score. Inspect it before relying on it." : "NOT_RECORDED.";
   const report = context?.report;
   const measurement = (value: { kind: "measured"; value: number } | { kind: "unavailable" }, suffix = ""): string =>
     value.kind === "measured" ? `${value.value}${suffix}` : "unavailable";
   const reportProjects = report?.projects.map(({ path, metrics }) =>
-    `- \`${path}\`: type errors ${measurement(metrics.typeErrors)}, lint errors ${measurement(metrics.lintErrors)}, coverage ${measurement(metrics.coverage, "%")}.`
+    `- ${codeSpan(path)}: type errors ${measurement(metrics.typeErrors)}, lint errors ${measurement(metrics.lintErrors)}, coverage ${measurement(metrics.coverage, "%")}.`
   ).join("\n");
   const evidence = report
-    ? `Supplied historical analysis report: \`${report.source}\` (SHA256 \`${report.hash}\`). This is not a live verification.\n\n${reportProjects}\n\nA parsed measurement does not prove that checks passed. Coverage alone does not prove all tests passed.`
+    ? `Supplied historical analysis report: ${codeSpan(report.source)} (SHA256 ${codeSpan(report.hash)}). This is not a live verification.\n\n${reportProjects}\n\nA parsed measurement does not prove that checks passed. Coverage alone does not prove all tests passed.`
     : "Failure evidence: NOT_RECORDED. In a trusted project, capture it with `btar analyze . --json --trust-project > baseline.json`, then regenerate with `--baseline-report baseline.json`. Review the report before relying on it.";
-  const roots = projects.map((project) => `\`${project.path}\``).join(", ");
+  const roots = projects.map((project) => codeSpan(project.path)).join(", ");
   const paths = context?.paths.length ? context.paths.map((path) => {
-    const destination = posix.join(repositoryRoot, path).split("/").map((part) =>
+    const destination = posix.join(safeText(repositoryRoot), safeText(path)).split("/").map((part) =>
       encodeURIComponent(part).replaceAll("(", "%28").replaceAll(")", "%29")
     ).join("/");
-    return `[${path}](${destination})`;
+    return `[${markdownText(path)}](${destination})`;
   }).join(", ") : "none recorded";
-  return managedBlock(`# ${options.projectName}
+  return managedBlock(`# ${markdownText(options.projectName)}
 
 ## Repository map
 
-Repository root relative to this file: \`${repositoryRoot}\`. Project roots and existing paths below are relative to that repository root.
+Repository root relative to this file: ${codeSpan(repositoryRoot)}. Project roots and existing paths below are relative to that repository root.
 Detected Python project roots: ${roots}.
 Existing root paths: ${paths}. Inspect existing README and architecture documents before claiming module ownership.
 
