@@ -38,6 +38,10 @@ This includes doctor, terminal drives, assertions, file capture, and cleanup. Us
 For other journeys, first run doctor in a fresh evidence directory, then prepare this owned target and harness:
 
 ```bash
+if [[ -v BTAR_OWNED_TARGET || -v BTAR_TARGET_ID ]]; then
+  printf '%s\n' 'BTAR target already prepared. Use a fresh shell for another target.' >&2
+  false
+else
 BTAR_OWNED_TARGET="$(mktemp -d /tmp/btar-verify-manual-XXXXXXXX)"
 readonly BTAR_OWNED_TARGET
 BTAR_TARGET_ID="$(python3 -c 'import os,sys; s=os.lstat(sys.argv[1]); print(s.st_dev, s.st_ino)' "$BTAR_OWNED_TARGET")"
@@ -76,6 +80,7 @@ term() {
   "$BTAR_CONTROL" capture --evidence "$BTAR_EVIDENCE" --label "$label" \
     --cwd "$BTAR_TARGET" --expect "$expected" --terminal -- bun "$BTAR_ROOT/dist/cli.js" "$@"
 }
+fi
 ```
 
 Each human-facing command gets an isolated PTY through `term`. JSON uses `drive` with separate stdout/stderr pipes. Concurrent runs use distinct targets, evidence directories and Hatch virtual environments. Do not rebuild the shared BTAR bundle while another run is driving it. Hatch and package-download caches can still be shared; these recipes do not test cache isolation.

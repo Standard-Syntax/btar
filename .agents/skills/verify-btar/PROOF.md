@@ -1,6 +1,18 @@
 # Verification proof
 
-## Current review fixes
+## Evidence and setup review repairs
+
+Verified against the built CLI at revision `93cab0970f8721b43cb7ec820cbf8576c1dad4bb` with these repairs in the working tree. No application implementation files changed.
+
+- Context generation with an apostrophe in `TMPDIR` passed in `$BTAR_STORE/run-review-six-1kuw3d_7`. `result.json` records status and cleanup PASS. The target was confirmed absent.
+- `03-poison-candidate/command.json` records the Python write, exact poisoned contents, working directory, exit 0, and completion before `04-force-candidate` started. The force action restored the generated profile.
+- The retained helper has SHA-256 `be8c34269cb456f0a19a040732e77a30bc06bc65c5f6acb72c786685fe3de349`. Both expected hook commands escape apostrophes in the target.
+- The repeated manual setup regression failed before the guard and passed after it. The second setup refuses before calling `mktemp`. All 18 helper and manual cleanup tests passed.
+- Build, typecheck, lint, and all 185 repository tests passed. Skill validation and Bash block syntax checks passed. Hosted CI was not run in this pass.
+
+The baseline save and stable recipe remains NOT_RUN as a complete journey. The next section records why its earlier PASS claim was withdrawn.
+
+## Prior review fixes
 
 Verified on Linux with Bun 1.4.4 at revision `c5bea7b7c64d0b5baa379bafe354b5d4cb39b1bb`, with these fixes in the working tree. No app implementation files changed.
 
@@ -8,10 +20,12 @@ Verified on Linux with Bun 1.4.4 at revision `c5bea7b7c64d0b5baa379bafe354b5d4cb
 | --- | --- | --- |
 | Context generation | PASS | `$BTAR_STORE/run-review-generation-c3dk4ise` |
 | Python analysis, consent, terminal, JSON, and threshold | PASS | `$BTAR_STORE/run-aXh7Hddq` |
-| Baseline save and stable ratchet | PASS | `$BTAR_STORE/run-aXh7Hddq` |
+| Baseline save and stable ratchet | NOT_RUN | Full recipe lacks retained post-ratchet baseline bytes and `cmp` evidence |
 | Remaining baseline actions and lint fixes | NOT_RUN | Outside this verification pass |
 
 Both evidence directories retain the helper source and SHA-256 `347a4374d53e8dc79c3737b2ca1221af58d3d76b3e95069282efab17b821236b`. Generation records status and cleanup PASS. The analysis target was removed after proof was copied. Clean analysis scored 100 with successful type, lint, and coverage metrics. An unused import lowered the score to 90 and failed the threshold. The coverage metric is retained in the command report. BTAR removes its temporary coverage JSON.
+
+The baseline save and stable commands in `$BTAR_STORE/run-aXh7Hddq` both exited 0 and reported score 100. The run retained `baseline-original.json`, but no post-ratchet baseline copy or recorded `cmp` result. These captures do not establish the full baseline recipe, so its PASS claim is withdrawn. The earlier NOT_RUN row describes the earlier pass.
 
 The seed runs Ruff import fixes, formatting, and a clean lint check before analysis. Ruff 0.17.4 requires the separate Hypothesis imports in this toolchain. Combining them reproduced I001.
 

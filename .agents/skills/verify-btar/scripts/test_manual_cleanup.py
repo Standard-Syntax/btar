@@ -11,7 +11,7 @@ SKILL = Path(__file__).resolve().parents[1] / "SKILL.md"
 
 class ManualCleanupTests(unittest.TestCase):
     def run_cleanup(self, action):
-        setup = SKILL.read_text().split('```bash\n')[3].split('capture() {')[0]
+        setup = SKILL.read_text().split('```bash\n')[3].split('```')[0]
         with tempfile.TemporaryDirectory(prefix="btar-manual-test-") as directory:
             root = Path(directory)
             unrelated = root / "unrelated"
@@ -34,6 +34,18 @@ class ManualCleanupTests(unittest.TestCase):
                             path.unlink()
                         elif path.exists():
                             shutil.rmtree(path)
+
+    def test_repeated_setup_refuses_before_creating_another_target(self):
+        setup = SKILL.read_text().split('```bash\n')[3].split('```')[0]
+        action = ('mktemp() { touch "$BTAR_EVIDENCE/repeated-mktemp"; return 99; }\n'
+                  + setup + '\nstatus=$?\n'
+                  'test ! -e "$BTAR_EVIDENCE/repeated-mktemp" || exit 98\n'
+                  'cleanup_target\nexit "$status"')
+        result, exists, _ = self.run_cleanup(action)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("already prepared", result.stderr)
+        self.assertNotEqual(result.returncode, 98)
+        self.assertFalse(exists)
 
     def test_mutable_target_cannot_redirect_cleanup(self):
         result, exists, _ = self.run_cleanup('export BTAR_TARGET="$UNRELATED"\ncleanup_target')

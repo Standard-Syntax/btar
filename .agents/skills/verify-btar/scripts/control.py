@@ -138,7 +138,8 @@ def generation(evidence):
         assert (target / "pyproject.btar.toml").read_bytes() == profile
         cli("03-refuse-candidate", "context", "generate", "python-toolchain", target, expected=1)
         assert (target / "pyproject.btar.toml").read_bytes() == profile
-        (target / "pyproject.btar.toml").write_text("poisoned candidate\n")
+        record(evidence, "03-poison-candidate", [sys.executable, "-c",
+               "from pathlib import Path; Path('pyproject.btar.toml').write_text('poisoned candidate\\n')"], target)
         cli("04-force-candidate", "context", "generate", "python-toolchain", target, "--force")
         assert (target / "pyproject.btar.toml").read_bytes() == profile
         for kind, path in (("agents-md", "AGENTS.md"), ("pre-commit", ".pre-commit-config.yaml"),
@@ -154,11 +155,12 @@ def generation(evidence):
         diagnostic = cli("07-invalid", "context", "validate", invalid, expected=1)
         assert "Issues found:" in diagnostic
         hooks = json.loads((target / ".claude/settings.json").read_text())
+        quoted_target = "'" + str(target).replace("'", "'\\''") + "'"
         assert hooks == {"hooks": {
             "PreToolUse": [{"matcher": "Edit|MultiEdit|Write", "hooks": [
-                {"type": "command", "command": f"cd -- '{target}' && hatch run pyrefly check"}]}],
+                {"type": "command", "command": f"cd -- {quoted_target} && hatch run pyrefly check"}]}],
             "PostToolUse": [{"matcher": "Edit|MultiEdit|Write", "hooks": [
-                {"type": "command", "command": f"btar analyze '{target}' --json"}]}],
+                {"type": "command", "command": f"btar analyze {quoted_target} --json"}]}],
         }}
         (evidence / "hooks-default.json").write_text(json.dumps(hooks, indent=2) + "\n")
         cli("08-output", "context", "generate", "agents-md", target, "--output", target / "custom/AGENTS.md")

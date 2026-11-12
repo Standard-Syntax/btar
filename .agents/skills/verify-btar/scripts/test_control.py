@@ -63,8 +63,8 @@ class ControlTests(unittest.TestCase):
                 self.assertIsNone(metadata["exit_code"])
                 self.assertTrue((self.evidence / label / "stdout.txt").is_file())
                 self.assertTrue((self.evidence / label / "stderr.txt").is_file())
-        self.assertTrue(metadata["interrupted"])
-        self.assertIn("missing", metadata["error"])
+                self.assertTrue(metadata["interrupted"])
+                self.assertIn("missing", metadata["error"])
 
     def test_timeout_kills_owned_terminal_processes(self):
         # Adopt test grandchildren so the test can reap them even under a container PID 1.
@@ -193,13 +193,41 @@ class ControlTests(unittest.TestCase):
         self.assertEqual(result["cleanup_error"], "cleanup failure")
 
     def test_cleanup_failure_after_success_prevents_pass(self):
+        profile = b'[tool.hatch.envs.default]\npython = "3.14"\n'
         for raises in (False, True):
             with self.subTest(raises=raises):
-                target = self.root / f"target-{raises}"
+                target = self.root / f"target's directory-{raises}"
                 target.mkdir()
+                quoted_target = f"'{self.root}/target'\\''s directory-{raises}'"
                 evidence = self.evidence / f"cleanup-{raises}"
                 evidence.mkdir()
-                with patch.object(control.tempfile, "mkdtemp", return_value=str(target)), \
+                def successful_record(_evidence, label, _argv, _cwd, *args, **kwargs):
+                    files = {
+                        "01-toolchain": ("pyproject.toml", profile),
+                        "02-candidate": ("pyproject.btar.toml", profile),
+                        "03-poison-candidate": ("pyproject.btar.toml", b"poisoned candidate\n"),
+                        "04-force-candidate": ("pyproject.btar.toml", profile),
+                        "05-agents-md": ("AGENTS.md", b"agents"),
+                        "05-pre-commit": (".pre-commit-config.yaml", b"hooks"),
+                        "05-hooks": (".claude/settings.json", json.dumps({"hooks": {
+                            "PreToolUse": [{"matcher": "Edit|MultiEdit|Write", "hooks": [
+                                {"type": "command", "command": f"cd -- {quoted_target} && hatch run pyrefly check"}]}],
+                            "PostToolUse": [{"matcher": "Edit|MultiEdit|Write", "hooks": [
+                                {"type": "command", "command": f"btar analyze {quoted_target} --json"}]}],
+                        }}).encode()),
+                        "08-output": ("custom/AGENTS.md", b"agents"),
+                        "09-hooks-disabled": (".claude/settings.json", b'{"hooks": {}}'),
+                    }
+                    if label in files:
+                        name, content = files[label]
+                        path = target / name
+                        path.parent.mkdir(parents=True, exist_ok=True)
+                        path.write_bytes(content)
+                    return "Issues found:" if label == "07-invalid" else ""
+
+                with patch.object(control, "doctor"), \
+                     patch.object(control, "record", side_effect=successful_record), \
+                     patch.object(control.tempfile, "mkdtemp", return_value=str(target)), \
                      patch.object(control.shutil, "rmtree", side_effect=OSError("cleanup failed") if raises else None):
                     with self.assertRaises((RuntimeError, OSError)):
                         control.generation(evidence)
