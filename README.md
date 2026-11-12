@@ -66,7 +66,7 @@ To preserve an existing AGENTS.md, use `btar context generate agents-md . --upda
 
 For historical failure evidence, capture `btar analyze . --json --trust-project > baseline.json` in a trusted project and pass `--baseline-report baseline.json` when generating. The report must match the detected Python project roots. A saved score alone does not record individual failures. Review unavailable measurements and do not treat coverage as proof that all tests passed.
 
-For pstack, install the complete skill set with `npx skills add backnotprop/pstack`, then run `/setup-pstack` and `/poteto-mode`. See the [pstack README](https://github.com/backnotprop/pstack#readme). BTAR does not install skills or configure models.
+For pstack, run `npx skills add backnotprop/pstack`. In the interactive selector, select all pstack skills and your target agents so `poteto-mode` has its dependencies. After installation, run `/setup-pstack` and `/poteto-mode`. See the [pstack README](https://github.com/backnotprop/pstack#readme). BTAR does not install skills or configure models.
 
 `init-ci` validates the required Hatch default-environment dependencies before writing its output. Generate and merge the toolchain configuration first. The generated CircleCI file uses Python 3.14 and runs Hatch checks for types, lint, tests with coverage, Semgrep, and diff-cover, plus a separate Gitleaks job. Use `btar init-ci . --threshold 80` to require 80 percent changed-line coverage from diff-cover. Generation refuses to overwrite an existing file unless you pass `--force`.
 
