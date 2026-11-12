@@ -96,6 +96,14 @@ btar context generate hooks .
 btar init-ci
 ```
 
+The AGENTS.md generator records detected Python roots, existing paths, and declared Hatch scripts without running project code. Use `--build-command`, `--test-command`, and `--lint-command` to supply commands. Target-profile commands are guidance, not verified checks.
+
+Use `btar context generate agents-md . --update` to append or replace the BTAR managed block while preserving surrounding bytes. The default refuses to overwrite an existing file. `--force` replaces the file and cannot be combined with `--update`.
+
+For historical failure evidence, capture `btar analyze . --json --trust-project > baseline.json` in a trusted project and pass `--baseline-report baseline.json` when generating. The report must match the detected Python roots. A saved score alone does not record individual failures. Review unavailable measurements and do not treat coverage as proof that all tests passed.
+
+For pstack, install the complete skill set with `npx skills add backnotprop/pstack`, then run `/setup-pstack` and `/poteto-mode`. See the [pstack README](https://github.com/backnotprop/pstack#readme). BTAR does not install skills or configure models.
+
 The Python toolchain generator writes `pyproject.toml` when the project has no project or legacy packaging metadata. For an existing `pyproject.toml`, `hatch.toml`, `setup.py`, or `setup.cfg`, it writes `pyproject.btar.toml` as a merge candidate unless you pass an explicit output path. Merge the toolchain candidate first. When `hatch.toml` exists, merge `[tool.hatch.*]` tables into it without the `tool.hatch.` prefix. For example, use `[envs.default]` and `[envs.default.scripts]`. Merge the project metadata, Ruff, pytest, and coverage settings into `pyproject.toml`, preserving existing identity and settings. Without `hatch.toml`, merge all relevant tables into `pyproject.toml`.
 
 Hatch gives top-level keys in `hatch.toml` precedence over `[tool.hatch]` in `pyproject.toml`. A standalone `envs` table replaces the entire pyproject environment table. The CircleCI generator validates required dependencies in the effective default environment and rejects malformed configuration before writing `.circleci/config.yml`. The configuration runs the Python checks through Hatch, then runs Gitleaks, Semgrep, and diff-cover. Use `btar init-ci . --threshold 80` to require 80 percent changed-line coverage. Review generated files before committing them. Use `--force` only when intentionally replacing an existing generated file.

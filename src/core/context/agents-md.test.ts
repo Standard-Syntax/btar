@@ -2,6 +2,13 @@ import { describe, expect, it } from "vitest";
 import { generateAgentsMd } from "./agents-md.js";
 
 describe("generateAgentsMd", () => {
+  it("keeps custom-output links intact when repository paths contain parentheses", () => {
+    const content = generateAgentsMd({
+      projectName: "sample", languages: [], repositoryRoot: "../repo)",
+      context: { projects: [], paths: ["README.md"], score: { kind: "missing" }, report: undefined },
+    });
+    expect(Bun.markdown.html(content)).toContain('href="../repo%29/README.md"');
+  });
   it("gives a Python 3.14 project its Hatch quality commands", () => {
     const content = generateAgentsMd({ projectName: "sample", languages: [] });
     expect(content).toContain("Python 3.14 or newer");
@@ -9,7 +16,7 @@ describe("generateAgentsMd", () => {
     expect(content).toContain("hatch run ruff check .");
     expect(content).toContain("hatch run pyrefly check");
     expect(content).toContain("Hypothesis");
-    expect(content).not.toContain("npm");
+    expect(content).toContain("npx skills add backnotprop/pstack");
   });
 });
 

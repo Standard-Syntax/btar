@@ -4,14 +4,15 @@
  */
 
 import { Command } from "commander";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { dirname, resolve, basename, join } from "node:path";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, resolve, basename, join, relative, sep } from "node:path";
 import { loadConfig } from "../core/config.js";
 import { detectLanguages } from "../core/detector.js";
 import {
   validateAgentsMd,
   generateAgentsMd,
 } from "../core/context/agents-md.js";
+import { inspectRepository, updateManagedBlock } from "../core/context/repository-context.js";
 import { generatePreCommitConfig } from "../core/context/pre-commit.js";
 import { generatePythonToolchainConfig } from "../core/context/python-toolchain.js";
 import {
@@ -69,12 +70,23 @@ generateCommand
   .description("Generate AGENTS.md for a project")
   .option("-o, --output <path>", "Output file path (default: AGENTS.md)")
   .option("-f, --force", "Overwrite existing file")
-  .action(async (directory?: string, options?: { output?: string; force?: boolean }) => {
+  .option("--update", "Update the BTAR managed block")
+  .option("--build-command <command>", "Use an explicit build command")
+  .option("--test-command <command>", "Use an explicit test command")
+  .option("--lint-command <command>", "Use an explicit lint command")
+  .option("--baseline-report <path>", "Include a saved btar analyze --json report")
+  .action(async (directory?: string, options?: { output?: string; force?: boolean; update?: boolean; buildCommand?: string; testCommand?: string; lintCommand?: string; baselineReport?: string }) => {
     const dir = resolve(directory ?? ".");
     const outputPath = resolve(options?.output ?? join(dir, "AGENTS.md"));
 
+    if (options?.force && options.update) {
+      console.error("--force and --update cannot be combined");
+      process.exitCode = 1;
+      return;
+    }
+
     // Check if output exists and force not set
-    if (existsSync(outputPath) && !options?.force) {
+    if (existsSync(outputPath) && !options?.force && !options?.update) {
       console.error(`File already exists: ${outputPath}`);
       console.error("Use --force to overwrite");
       process.exit(1);
@@ -91,10 +103,17 @@ generateCommand
 
     // Generate AGENTS.md
     const projectName = basename(dir);
-    const content = generateAgentsMd({
-      projectName,
-      languages,
-    });
+    let content: string | Buffer;
+    try {
+      const context = await inspectRepository(dir, languages, options?.baselineReport, config.exclude);
+      const repositoryRoot = relative(dirname(outputPath), dir).split(sep).join("/") || ".";
+      content = generateAgentsMd({ projectName, languages, context, repositoryRoot, buildCommand: options?.buildCommand, testCommand: options?.testCommand, lintCommand: options?.lintCommand });
+      if (options?.update && existsSync(outputPath)) content = updateManagedBlock(readFileSync(outputPath), content);
+    } catch (error) {
+      console.error(`Cannot generate AGENTS.md: ${error instanceof Error ? error.message : String(error)}`);
+      process.exitCode = 1;
+      return;
+    }
 
     // Ensure output directory exists
     const outputDir = dirname(outputPath);
