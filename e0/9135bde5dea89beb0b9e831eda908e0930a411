@@ -1,0 +1,41 @@
+.agents/skills/verify-btar/features/baselines.md
+  s_5395d022aff8aa::t_d66c1208d53a7a 32
+.agents/skills/verify-btar/features/analysis.md
+  s_5395d022aff8aa::t_d66c1208d53a7a 20-21,23,45
+  s_5395d022aff8aa::t_a5e204a95a80bc 22,26-40
+  s_5395d022aff8aa::t_6372054767d5f0 24
+  s_5395d022aff8aa::t_17b57ad32080ee 25
+.agents/skills/verify-btar/features/context-generation.md
+  s_5395d022aff8aa::t_d66c1208d53a7a 23
+.agents/skills/verify-btar/PROOF.md
+  s_5395d022aff8aa::t_c175a89890706a 1,3,11,13-16,19,21,23
+  s_5395d022aff8aa::t_673a23f5333afc 5,9-10,17
+  s_5395d022aff8aa::t_d4aad2b3ce4398 4
+.agents/skills/verify-btar/SKILL.md
+  s_5395d022aff8aa::t_bbee0a793928f4 18-20
+  s_5395d022aff8aa::t_d66c1208d53a7a 21,30-32,110
+  s_5395d022aff8aa::t_c175a89890706a 107,118
+  s_5395d022aff8aa::t_94cfbc7145822b 12,134
+.agents/skills/verify-btar/scripts/control.py
+  s_5395d022aff8aa::t_eae82aebf4db50 4-5,10-12,18,25,29-31,34-36,39-73,75,78-81,96-98,101-107,109
+.agents/skills/verify-btar/features/fix.md
+  s_5395d022aff8aa::t_6372054767d5f0 26
+  s_5395d022aff8aa::t_bbee0a793928f4 22
+  s_5395d022aff8aa::t_d66c1208d53a7a 24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e09135bde5dea89beb0b9e831eda908e0930a411",
+  "prompts": {},
+  "sessions": {
+    "s_5395d022aff8aa": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cd36-88d1-7961-94ba-c5a76b9e6263",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Derek Vitrano <derek.vitrano@gmail.com>"
+    }
+  }
+}
