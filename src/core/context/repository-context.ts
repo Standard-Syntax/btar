@@ -119,6 +119,10 @@ export async function inspectRepository(directory: string, languages: DetectedLa
 
 const START = "<!-- BTAR:START -->";
 const END = "<!-- BTAR:END -->";
+const HTML_ATTRIBUTE = "[A-Za-z_:][A-Za-z0-9_.:-]*(?:[ \\t]*=[ \\t]*(?:[^\\t\\n\\f\\r \"'=<>`]+|'[^']*'|\"[^\"]*\"))?";
+const GENERIC_HTML_OPEN_BLOCK = new RegExp(`^ {0,3}<(?!(?:script|pre|style|textarea)(?=[\\s/>]|$))[A-Za-z][A-Za-z0-9-]*(?:[ \\t]+${HTML_ATTRIBUTE})*[ \\t]*\\/?>[ \\t]*$`, "i");
+const GENERIC_HTML_CLOSE_BLOCK = /^ {0,3}<\/[A-Za-z][A-Za-z0-9-]*[ \t]*>[ \t]*$/;
+
 function blockMarkers(content: string): { kind: string; index: number; length: number }[] {
   const markers: { kind: string; index: number; length: number }[] = [];
   type Literal = { kind: "fence"; character: string; length: number } | { kind: "html"; end: RegExp };
@@ -142,7 +146,7 @@ function blockMarkers(content: string): { kind: string; index: number; length: n
       markers.push({ kind: marker[1], index: line.index, length: text.length });
       continue;
     }
-    if (/^[ \t]*<!--\s*BTAR\s*:/i.test(text) && !/-->[ \t]*\S/.test(text)) {
+    if (/^[ \t]*<!--\s*BTAR\s*:/i.test(text)) {
       throw new Error("Malformed or duplicate BTAR managed block markers.");
     }
     let end: RegExp | undefined;
@@ -153,7 +157,7 @@ function blockMarkers(content: string): { kind: string; index: number; length: n
     else if (/^ {0,3}<!\[CDATA\[/.test(text)) end = /\]\]>/;
     else if (/^ {0,3}<![A-Z]/.test(text)) end = />/;
     else if (/^ {0,3}<\/?(?:address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(?=[\s/>]|$)/i.test(text) ||
-      /^ {0,3}<\/?[A-Za-z][\w-]*(?:\s+[^<>]*)?\s*\/?>[ \t]*$/.test(text)) end = /^[ \t]*$/;
+      GENERIC_HTML_OPEN_BLOCK.test(text) || GENERIC_HTML_CLOSE_BLOCK.test(text)) end = /^[ \t]*$/;
     if (end && !end.test(text)) literal = { kind: "html", end };
   }
   if (literal?.kind === "fence") throw new Error("Cannot update context with an unclosed Markdown code fence.");

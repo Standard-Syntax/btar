@@ -13,7 +13,7 @@ const REQUIRED_SECTIONS = [
 ];
 
 function safeText(value: string): string {
-  if (Array.from(value).some((char) => { const code = char.codePointAt(0) ?? 0; return code < 32 || (code >= 127 && code <= 159) || code === 0x2028 || code === 0x2029; })) throw new Error("Repository context contains control characters.");
+  if (Array.from(value).some((char) => { const code = char.codePointAt(0) ?? 0; return code < 32 || (code >= 127 && code <= 159) || code === 0x2028 || code === 0x2029 || /\p{Bidi_Control}/u.test(char); })) throw new Error("Repository context contains control characters.");
   return value;
 }
 

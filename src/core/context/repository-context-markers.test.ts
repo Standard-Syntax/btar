@@ -45,8 +45,51 @@ describe("managed guidance markers", () => {
     expect(() => updateManagedBlock(Buffer.from(`${marker}\n`), generated)).toThrow();
   });
 
+  it.each(["<!-- BTAR:START --> trailing", "<!-- BTAR:END --> trailing", "<!-- BTAR:UNKNOWN --> trailing"])('rejects a BTAR marker with trailing text %s', (marker) => {
+    expect(() => updateManagedBlock(Buffer.from(`${marker}\n`), generated)).toThrow();
+  });
+
+  it("recognizes managed markers after a self-closing raw HTML tag", () => {
+    const original = Buffer.from(`<pre/>\n${start}\nold\n${end}\n`);
+    expect(updateManagedBlock(original, generated).toString()).toBe(`<pre/>\n${start}\nnew\n${end}\n`);
+  });
+
+  it("preserves marker examples in a type-7 closing raw HTML tag block", () => {
+    const original = Buffer.from(`</pre>\n${start}\nexample\n${end}\n\n`);
+    const updated = updateManagedBlock(original, generated);
+    expect(updated.subarray(0, original.length)).toEqual(original);
+  });
+
+  it("preserves marker examples in a multiline type-6 HTML block", () => {
+    const original = Buffer.from(`<div\nid="example">\n${start}\nexample\n${end}\n\n`);
+    const updated = updateManagedBlock(original, generated);
+    expect(updated.subarray(0, original.length)).toEqual(original);
+  });
+
+  it("ends a self-closing generic HTML block at the blank line", () => {
+    const original = Buffer.from(`<custom />\n\n${start}\nold\n${end}\n`);
+    expect(updateManagedBlock(original, generated).toString()).toBe(`<custom />\n\n${start}\nnew\n${end}\n`);
+  });
+
+  it("preserves marker examples inside HTML tags with quoted greater-than signs", () => {
+    const original = Buffer.from(`<custom value=">">\n${start}\nexample\n${end}\n</custom>\n\n`);
+    const updated = updateManagedBlock(original, generated);
+    expect(updated.subarray(0, original.length)).toEqual(original);
+  });
+
+  it("preserves marker examples inside single-quoted HTML attributes", () => {
+    const original = Buffer.from(`<custom value='>'>\n${start}\nexample\n${end}\n</custom>\n\n`);
+    const updated = updateManagedBlock(original, generated);
+    expect(updated.subarray(0, original.length)).toEqual(original);
+  });
+
+  it("updates managed markers after an invalid HTML attribute", () => {
+    const original = Buffer.from(`<custom ">">\n${start}\nold\n${end}\n`);
+    expect(updateManagedBlock(original, generated).toString()).toBe(`<custom ">">\n${start}\nnew\n${end}\n`);
+  });
+
   it("preserves inline marker examples", () => {
-    const original = Buffer.from(`Documentation: ${start}\n${end} is an example.\n`);
+    const original = Buffer.from(`Documentation: ${start} and ${end} are examples.\n`);
     expect(updateManagedBlock(original, generated)).toEqual(Buffer.concat([original, Buffer.from(generated)]));
   });
 
