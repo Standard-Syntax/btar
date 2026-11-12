@@ -1,45 +1,84 @@
 #!/usr/bin/env python3
 """Drive the built BTAR CLI and retain command evidence outside scratch targets."""
 import argparse
+import errno
+import fcntl
 import hashlib
 import json
 import os
 from pathlib import Path
+import pty
+import re
+import select
 import shutil
 import signal
 import subprocess
 import sys
 import tempfile
+import termios
 import time
 
 ROOT = Path(__file__).resolve().parents[4]
 CLI = ROOT / "dist/cli.js"
 
 
-def record(evidence, label, argv, cwd, expected=0, terminal=False):
+def record(evidence, label, argv, cwd, expected=0, terminal=False, timeout=900):
     destination = evidence / label
     destination.mkdir(parents=True, exist_ok=False)
     command = list(map(str, argv))
-    # util-linux script gives each human-facing drive its own PTY. JSON stays piped.
-    if terminal:
-        import shlex
-        command = ["script", "--quiet", "--return", "--command", shlex.join(command), "/dev/null"]
-    metadata = {"argv": list(map(str, argv)), "cwd": str(cwd), "terminal": terminal,
+    env_overrides = {"HATCH_ENV_TYPE_VIRTUAL_PATH": str(Path(cwd) / ".venv")}
+    metadata = {"argv": command, "cwd": str(cwd), "terminal": terminal,
+                "env_overrides": env_overrides, "timeout_seconds": timeout,
                 "expected_exit": expected, "started": time.time()}
     (destination / "command.json").write_text(json.dumps(metadata, indent=2) + "\n")
-    env = dict(os.environ, HATCH_ENV_TYPE_VIRTUAL_PATH=str(Path(cwd) / ".venv"))
+    env = dict(os.environ, **env_overrides)
+    child = None
+    master = slave = None
     with (destination / "stdout.txt").open("wb") as out, (destination / "stderr.txt").open("wb") as err:
-        child = subprocess.Popen(command, cwd=cwd, env=env, stdout=out, stderr=err,
-                                 stdin=subprocess.DEVNULL, start_new_session=True)
         try:
-            status = child.wait(timeout=900)
-        except BaseException:
-            os.killpg(child.pid, signal.SIGKILL)
-            child.wait()
+            if terminal:
+                master, slave = pty.openpty()
+            child = subprocess.Popen(
+                command, cwd=cwd, env=env, stdout=slave if terminal else out,
+                stderr=slave if terminal else err,
+                stdin=slave if terminal else subprocess.DEVNULL, start_new_session=True,
+                # This single-threaded helper gives the child its controlling terminal.
+                preexec_fn=(lambda: fcntl.ioctl(0, termios.TIOCSCTTY, 0)) if terminal else None,
+            )
+            deadline = time.monotonic() + timeout
+            if slave is not None:
+                os.close(slave)
+                slave = None
+                os.write(master, b"\x04")
+                while True:
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0 or not select.select([master], [], [], remaining)[0]:
+                        raise subprocess.TimeoutExpired(command, timeout)
+                    try:
+                        data = os.read(master, 65536)
+                    except OSError as error:
+                        if error.errno != errno.EIO:
+                            raise
+                        break
+                    if not data:
+                        break
+                    out.write(data)
+            status = child.wait(timeout=max(0, deadline - time.monotonic()))
+        except BaseException as error:
+            if child is not None:
+                try:
+                    os.killpg(child.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                child.wait()
             metadata["interrupted"] = True
+            metadata["error"] = str(error)
             raise
         finally:
-            metadata["exit_code"] = child.returncode
+            for descriptor in (master, slave):
+                if descriptor is not None:
+                    os.close(descriptor)
+            metadata["exit_code"] = child.returncode if child is not None else None
             metadata["finished"] = time.time()
             (destination / "command.json").write_text(json.dumps(metadata, indent=2) + "\n")
     if status != expected:
@@ -54,12 +93,20 @@ def doctor(evidence):
         raise RuntimeError(f"Bun too old: {version}")
     record(evidence, "doctor-version", ["bun", CLI, "--version"], ROOT)
     help_text = record(evidence, "doctor-help", ["bun", CLI, "--help"], ROOT)
-    if not all(word in help_text for word in ("analyze", "init-ci", "context", "fix")):
+    command_section = help_text.partition("\nCommands:\n")[2]
+    commands = set(re.findall(r"^  ([a-z][a-z0-9-]*)(?=\s|$)", command_section, re.MULTILINE))
+    if not {"analyze", "init-ci", "context", "fix"}.issubset(commands):
         raise RuntimeError("Unexpected CLI command surface")
     inputs = [ROOT / "package.json", ROOT / "bun.lock", CLI]
-    inputs += sorted((ROOT / "src").rglob("*.ts"))
+    missing = [str(path.relative_to(ROOT)) for path in inputs if not path.is_file()]
+    sources = sorted((ROOT / "src").rglob("*.ts"))
+    if not sources:
+        missing.append("src/**/*.ts")
+    if missing:
+        raise RuntimeError(f"Missing required build inputs: {', '.join(missing)}")
+    inputs += sources
     manifest = {str(path.relative_to(ROOT)): hashlib.sha256(path.read_bytes()).hexdigest()
-                for path in inputs if path.is_file()}
+                for path in inputs}
     (evidence / "build-inputs.json").write_text(json.dumps(manifest, indent=2) + "\n")
     revision = record(evidence, "doctor-revision", ["git", "rev-parse", "HEAD"], ROOT).strip()
     record(evidence, "doctor-dirty", ["git", "status", "--short"], ROOT)
@@ -136,7 +183,6 @@ def main():
     parser.add_argument("--cwd", type=Path, default=ROOT)
     parser.add_argument("--expect", type=int, default=0)
     parser.add_argument("--terminal", action="store_true")
-    # Split explicitly so arbitrary BTAR flags after -- are never parsed as helper flags.
     args_list = sys.argv[1:]
     split = args_list.index("--") if "--" in args_list else len(args_list)
     args = parser.parse_args(args_list[:split])

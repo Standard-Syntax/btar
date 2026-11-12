@@ -20,7 +20,7 @@ Run `btar context generate python-toolchain`, `agents-md`, `pre-commit` or `hook
 
 Preconditions: follow Launch in SKILL.md; no manual target or Hatch installation is needed.
 
-- **Full seeded journey.** Run `"$BTAR_CONTROL" generation --evidence "$BTAR_EVIDENCE"`. Expect exit 0 and `result.json` with status and cleanup both PASS.
+- **Full generation journey.** Run `"$BTAR_CONTROL" generation --evidence "$BTAR_EVIDENCE"`. Expect exit 0 and `result.json` with status and cleanup both PASS.
 - **New project.** Recorded action `01-toolchain` runs `context generate python-toolchain` against an empty directory. The saved `after/pyproject.toml` parses as TOML and selects Python 3.14.
 - **Brownfield candidate.** Actions `02-candidate` through `04-force-candidate` generate `pyproject.btar.toml`, refuse a repeated write with exit 1, then explicitly force it. Both profile files retain the original profile bytes.
 - **Guidance/integrations.** Actions `05-*` generate AGENTS.md, pre-commit YAML and Claude JSON. Actions `06-refuse-*` require exit 1 and unchanged bytes. `07-validate` requires successful AGENTS validation.

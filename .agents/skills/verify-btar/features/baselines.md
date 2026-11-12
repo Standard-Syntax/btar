@@ -29,5 +29,5 @@ Preconditions: Launch, doctor, manual harness and pristine Python seed; no `.bta
 ## Gotchas
 
 - Saving a new baseline is deliberate adoption of a score, not a ratchet check. Do not save after the regression just to make ratchet pass.
-- Invalid JSON shape is exercised here; legacy scope and changed project-set incompatibility need their own fixtures and remain NOT_RUN.
+- An empty JSON object is exercised here; other malformed shapes, legacy scope, and changed project-set incompatibility need their own fixtures and remain NOT_RUN.
 - Do not count a nonzero exit as a regression proof until measurements and the ratchet-specific diagnostic agree.

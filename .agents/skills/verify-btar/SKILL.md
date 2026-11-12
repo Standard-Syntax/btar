@@ -9,15 +9,16 @@ Read [the feature index](features/README.md) first. BTAR's primary surface is a 
 
 ## Launch
 
-From the BTAR checkout, in Bash on Linux with Python 3.11+ and util-linux `script`:
+From the BTAR checkout, in Bash on Linux with Python 3.11+:
 
 ```bash
 export BTAR_ROOT="$PWD"
 export BTAR_CONTROL="$BTAR_ROOT/.agents/skills/verify-btar/scripts/control.py"
 BTAR_STORE="${XDG_STATE_HOME:-$HOME/.local/state}/btar-verification"
-mkdir -p "$BTAR_STORE"
-export BTAR_EVIDENCE="$(mktemp -d "$BTAR_STORE/run-XXXXXXXX")"
-bun install --frozen-lockfile >"$BTAR_EVIDENCE/install.txt" 2>&1
+mkdir -p "$BTAR_STORE" &&
+BTAR_EVIDENCE="$(mktemp -d "$BTAR_STORE/run-XXXXXXXX")" &&
+export BTAR_EVIDENCE &&
+bun install --frozen-lockfile >"$BTAR_EVIDENCE/install.txt" 2>&1 &&
 bun run build >"$BTAR_EVIDENCE/build.txt" 2>&1
 ```
 
@@ -26,9 +27,9 @@ Require both commands to exit 0. Read their logs on failure and stop before driv
 The automated generation journey creates its own empty target and cleans it in `finally` on success or failure. No live Python project is needed:
 
 ```bash
-"$BTAR_CONTROL" generation --evidence "$BTAR_EVIDENCE"
-cat "$BTAR_EVIDENCE/result.json"
-test -d "$BTAR_EVIDENCE/after"
+"$BTAR_CONTROL" generation --evidence "$BTAR_EVIDENCE" &&
+python3 -c 'import json,sys; r=json.load(open(sys.argv[1])); assert r["status"] == "PASS" and r["cleanup"] == "PASS"' "$BTAR_EVIDENCE/result.json" &&
+test -d "$BTAR_EVIDENCE/after" &&
 test ! -e "$(cat "$BTAR_EVIDENCE/target.txt")"
 ```
 
@@ -103,10 +104,10 @@ For manual runs, `term LABEL EXPECTED_EXIT ...` captures terminal behavior; `dri
 
 Evidence lives in `$BTAR_EVIDENCE` under the persistent local state directory, outside every disposable target. Preserve:
 
-- Command argv, cwd, timestamps, expected and actual exit code in each `command.json`.
+- Command argv, cwd, injected environment overrides, timeout, timestamps, expected and actual exit code in each `command.json`.
 - `stdout.txt` and `stderr.txt`; PTY output merges application streams in stdout and may include ANSI/CR characters. JSON runs must stay piped and parse as one complete JSON document.
 - Build/install logs, revision/dirty state and input/bundle SHA-256 manifest.
-- Before/after files, report bodies, baseline bytes, coverage report and assertions appropriate to the feature. The automated journey saves complete `before/` and `after/` trees and a hashed file manifest in `result.json`.
+- Before/after files, report bodies, baseline bytes, measured coverage and assertions appropriate to the feature. The automated journey saves complete `before/` and `after/` trees and a hashed file manifest in `result.json`.
 
 Exercise real user commands and verify their resulting files, not internal setters, mocks or final messages alone. The automated journey checks that generation leaves no `.venv` or `.git`; this is filesystem evidence only. It captures no network trace and makes no zero-network claim. BTAR has no dry-run flag. Trusted analysis writes coverage/cache files and can download dependencies; fix changes source. Hooks are generated as data, never installed in the BTAR checkout or executed by this skill. No mocks are needed.
 
@@ -114,7 +115,7 @@ Report PASS/FAIL/NOT_RUN/BLOCKED per feature and entry point. A score or generat
 
 ## Cleanup
 
-The automated journey removes only its own recorded temporary target in `finally`, including after assertion failures. All subprocesses have a 900-second limit; interrupted/timed-out commands terminate their own process group. Deliberately detached descendants are outside this guarantee. Never kill processes by name.
+The automated journey removes only its own recorded temporary target in `finally`, including after assertion failures. All subprocesses have a 900-second limit. On timeout or a caught Python exception, including Ctrl-C, the helper kills and reaps its owned command process group. Terminal commands run directly in that group with a controlling PTY. SIGTERM and SIGKILL do not run Python exception cleanup. Deliberately detached descendants are outside this guarantee. Never kill processes by name.
 
 Manual journeys must copy proof before removing the owned target:
 
@@ -130,7 +131,7 @@ Run cleanup after failed iterations too. Do not delete `$BTAR_EVIDENCE`. No glob
 
 ## Helpers
 
-Executable helper: `scripts/control.py` (Python standard library; `script` required only for terminal drives).
+Executable helper: `scripts/control.py` (Python standard library).
 
 ```bash
 "$BTAR_CONTROL" --help

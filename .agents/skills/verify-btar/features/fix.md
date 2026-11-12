@@ -19,11 +19,11 @@ Preconditions: Launch, doctor, manual harness and pristine Python seed; real Hat
 
 - **Introduce a fixable issue.** Run `printf 'import os\n\ndef double(value: int) -> int:\n    return value * 2\n' >"$BTAR_TARGET/example.py"`. Save it with `cp "$BTAR_TARGET/example.py" "$BTAR_EVIDENCE/fix-before.py"`.
 - **Refuse execution.** Run `term fix-no-consent 1 fix "$BTAR_TARGET"`; require a consent diagnostic and `cmp "$BTAR_EVIDENCE/fix-before.py" "$BTAR_TARGET/example.py"`.
-- **Default entry.** Run `term fix-default 0 fix "$BTAR_TARGET" --trust-project`. Require the unused `import os` to be removed from the stored source; preserve it as `$BTAR_EVIDENCE/fix-default-after.py`.
+- **Default entry.** Run `term fix-default 0 fix "$BTAR_TARGET" --trust-project`. Require the unused `import os` to be removed from the stored source; run `cp "$BTAR_TARGET/example.py" "$BTAR_EVIDENCE/fix-default-after.py"`.
 - **Language entry.** Restore `cp "$BTAR_EVIDENCE/fix-before.py" "$BTAR_TARGET/example.py"`, then run `term fix-python 0 fix "$BTAR_TARGET" --trust-project --language python`. Require the unused import removed again.
-- **Independent check.** Run `capture fix-ruff-check 0 hatch run ruff check .` and `capture fix-pytest 0 hatch run pytest -q`. Preserve the final example.py before Cleanup.
+- **Independent check.** Run `capture fix-ruff-check 0 hatch run ruff check .` and `capture fix-pytest 0 hatch run pytest -q`. Run `cp "$BTAR_TARGET/example.py" "$BTAR_EVIDENCE/fix-final.py"` before Cleanup.
 - **Unsupported language.** Run `term fix-language-missing 1 fix "$BTAR_TARGET" --trust-project --language javascript`; require `Language not detected` and unchanged source.
-- **Proof.** Keep before/after source and a diff, expected refusal exits, fix transcripts and independent Ruff/pytest results. A success summary without source evidence is insufficient.
+- **Proof.** Run `{ diff -u "$BTAR_EVIDENCE/fix-before.py" "$BTAR_EVIDENCE/fix-final.py" >"$BTAR_EVIDENCE/fix.diff" || test "$?" -eq 1; } && test -s "$BTAR_EVIDENCE/fix.diff"` to preserve a nonempty diff and reject both unchanged files and diff errors. Keep the source, expected refusal exits, fix transcripts and independent Ruff/pytest results. A success summary without source evidence is insufficient.
 
 ## Gotchas
 
