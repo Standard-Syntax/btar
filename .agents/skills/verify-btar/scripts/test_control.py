@@ -192,7 +192,7 @@ class ControlTests(unittest.TestCase):
         self.assertEqual(result["error"], "original failure")
         self.assertEqual(result["cleanup_error"], "cleanup failure")
 
-    def test_cleanup_failure_after_success_prevents_pass(self):
+    def test_cleanup_success_and_failure_after_generation(self):
         profile = b'[tool.hatch.envs.default]\npython = "3.14"\n'
         for raises in (False, True):
             with self.subTest(raises=raises):
@@ -225,17 +225,24 @@ class ControlTests(unittest.TestCase):
                         path.write_bytes(content)
                     return "Issues found:" if label == "07-invalid" else ""
 
+                real_rmtree = control.shutil.rmtree
                 with patch.object(control, "doctor"), \
                      patch.object(control, "record", side_effect=successful_record), \
                      patch.object(control.tempfile, "mkdtemp", return_value=str(target)), \
-                     patch.object(control.shutil, "rmtree", side_effect=OSError("cleanup failed") if raises else None):
-                    with self.assertRaises((RuntimeError, OSError)):
+                     patch.object(control.shutil, "rmtree", wraps=real_rmtree,
+                                  side_effect=OSError("cleanup failed") if raises else None):
+                    if raises:
+                        with self.assertRaisesRegex(OSError, "cleanup failed"):
+                            control.generation(evidence)
+                    else:
                         control.generation(evidence)
                 result = json.loads((evidence / "result.json").read_text())
-                self.assertEqual(result["status"], "FAIL")
-                self.assertEqual(result["cleanup"], "FAIL")
+                self.assertEqual(result["status"], "FAIL" if raises else "PASS")
+                self.assertEqual(result["cleanup"], "FAIL" if raises else "PASS")
                 self.assertIn("files", result)
-                self.assertTrue(target.exists())
+                self.assertEqual(target.exists(), raises)
+                if raises:
+                    self.assertEqual(result["cleanup_error"], "cleanup failed")
 
     def test_target_evidence_write_failure_still_cleans_target(self):
         target = self.root / "target"
