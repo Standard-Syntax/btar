@@ -40,7 +40,7 @@ class ControlTests(unittest.TestCase):
             "print(os.getpid()==os.getsid(0)==os.getpgrp()==os.tcgetpgrp(0)); "
             "print('stderr marker',file=sys.stderr)"], self.root, terminal=True)
         self.assertIn("True True True", output)
-        self.assertIn("True\n", output)
+        self.assertIn("True", output.splitlines())
         self.assertIn("stderr marker", output)
         self.assertEqual((self.evidence / "terminal/stderr.txt").read_bytes(), b"")
 
@@ -77,7 +77,7 @@ class ControlTests(unittest.TestCase):
                     try:
                         with self.assertRaises(subprocess.TimeoutExpired):
                             control.record(self.evidence, label, [sys.executable, "-c", code],
-                                           self.root, terminal=terminal, timeout=0.5)
+                                           self.root, terminal=terminal, timeout=5)
                         pids = [int(pid) for pid in pidfile.read_text().splitlines()]
                         self.assertEqual(len(pids), 2)
                         for pid in pids:
