@@ -1,0 +1,19 @@
+.agents/skills/verify-btar/scripts/test_control.py
+  s_5395d022aff8aa::t_a8ed9c3cfd7d37 1-144
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c7a65f4ad62d8632016aafa2b402f0e108e87ea6",
+  "prompts": {},
+  "sessions": {
+    "s_5395d022aff8aa": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cd36-88d1-7961-94ba-c5a76b9e6263",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Derek Vitrano <derek.vitrano@gmail.com>"
+    }
+  }
+}
