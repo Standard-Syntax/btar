@@ -60,6 +60,14 @@ btar context generate pre-commit .
 btar context generate hooks .
 ```
 
+The AGENTS.md generator records detected project roots, existing paths, and declared Hatch scripts without running project code. Use `--build-command`, `--test-command`, and `--lint-command` to supply commands explicitly. Generated target-profile commands are guidance, not verified project checks.
+
+To preserve an existing AGENTS.md, use `btar context generate agents-md . --update`. BTAR appends or replaces its marked block and preserves the surrounding content. It rejects malformed or duplicate markers. The default refuses to overwrite; `--force` replaces the file and cannot be combined with `--update`.
+
+For historical failure evidence, capture `btar analyze . --json --trust-project > baseline.json` in a trusted project and pass `--baseline-report baseline.json` when generating. The report must match the detected Python project roots. A saved score alone does not record individual failures. Review unavailable measurements and do not treat coverage as proof that all tests passed.
+
+For pstack, run `npx skills add backnotprop/pstack`. In the interactive selector, select all pstack skills and your target agents so `poteto-mode` has its dependencies. After installation, run `/setup-pstack` and `/poteto-mode`. See the [pstack README](https://github.com/backnotprop/pstack#readme). BTAR does not install skills or configure models.
+
 `init-ci` validates the required Hatch default-environment dependencies before writing its output. Generate and merge the toolchain configuration first. The generated CircleCI file uses Python 3.14 and runs Hatch checks for types, lint, tests with coverage, Semgrep, and diff-cover, plus a separate Gitleaks job. Use `btar init-ci . --threshold 80` to require 80 percent changed-line coverage from diff-cover. Generation refuses to overwrite an existing file unless you pass `--force`.
 
 ## Prepare a project
