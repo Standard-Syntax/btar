@@ -38,11 +38,33 @@ This includes doctor, terminal drives, assertions, file capture, and cleanup. Us
 For other journeys, first run doctor in a fresh evidence directory, then prepare this owned target and harness:
 
 ```bash
-export BTAR_TARGET="$(mktemp -d /tmp/btar-verify-manual-XXXXXXXX)"
+BTAR_OWNED_TARGET="$(mktemp -d /tmp/btar-verify-manual-XXXXXXXX)"
+readonly BTAR_OWNED_TARGET
+BTAR_TARGET_ID="$(python3 -c 'import os,sys; s=os.lstat(sys.argv[1]); print(s.st_dev, s.st_ino)' "$BTAR_OWNED_TARGET")"
+readonly BTAR_TARGET_ID
+cleanup_target() {
+  python3 - "$BTAR_OWNED_TARGET" "$BTAR_TARGET_ID" <<'PYCLEAN'
+import os
+from pathlib import Path
+import shutil
+import stat
+import sys
+
+path = Path(sys.argv[1])
+if not path.exists() and not path.is_symlink():
+    sys.exit(0)
+info = path.lstat()
+if (path.parent != Path("/tmp") or not path.name.startswith("btar-verify-manual-")
+        or not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid()
+        or f"{info.st_dev} {info.st_ino}" != sys.argv[2]):
+    sys.exit("Refusing cleanup of a target whose ownership changed")
+shutil.rmtree(path)
+PYCLEAN
+}
+trap cleanup_target EXIT
+export BTAR_TARGET="$BTAR_OWNED_TARGET"
 export HATCH_ENV_TYPE_VIRTUAL_PATH="$BTAR_TARGET/.venv"
 printf '%s\n' "$BTAR_TARGET" >"$BTAR_EVIDENCE/target.txt"
-cleanup_target() { python3 -c 'import os,shutil; shutil.rmtree(os.environ["BTAR_TARGET"], ignore_errors=True)'; }
-trap cleanup_target EXIT
 capture() {
   local label="$1" expected="$2"; shift 2
   "$BTAR_CONTROL" capture --evidence "$BTAR_EVIDENCE" --label "$label" \
@@ -76,7 +98,9 @@ def test_double(value: int) -> None:
     assert double(value) == value + value
 PY
 capture python-version 0 hatch run python --version
+capture seed-imports 0 hatch run ruff check --select I --fix .
 capture seed-format 0 hatch run ruff format .
+capture seed-lint 0 hatch run ruff check .
 cp "$BTAR_TARGET/pyproject.toml" "$BTAR_EVIDENCE/seed-pyproject.toml"
 cp "$BTAR_TARGET/example.py" "$BTAR_EVIDENCE/seed-example.py"
 cp "$BTAR_TARGET/tests/test_example.py" "$BTAR_EVIDENCE/seed-test.py"
@@ -115,14 +139,14 @@ Report PASS/FAIL/NOT_RUN/BLOCKED per feature and entry point. A score or generat
 
 ## Cleanup
 
-The automated journey removes only its own recorded temporary target in `finally`, including after assertion failures. All subprocesses have a 900-second limit. On timeout or a caught Python exception, including Ctrl-C, the helper kills and reaps its owned command process group. Terminal commands run directly in that group with a controlling PTY. SIGTERM and SIGKILL do not run Python exception cleanup. Deliberately detached descendants are outside this guarantee. Never kill processes by name.
+The automated journey removes only its own recorded temporary target in `finally`, including after assertion failures. All subprocesses have a 900-second limit. On timeout or a caught Python exception, including Ctrl-C, the helper kills its owned command process group and reaps the direct child. Terminal commands run directly in that group with a controlling PTY. SIGTERM triggers the same cleanup and finalizes command metadata before exit. SIGKILL cannot run Python cleanup. Deliberately detached descendants are outside this guarantee. Never kill processes by name.
 
-Manual journeys must copy proof before removing the owned target:
+Manual cleanup uses the readonly created path and checks its device, inode, owner, and directory type. It refuses a replaced directory or symlink. Copy proof before removing the owned target:
 
 ```bash
 cleanup_target
 trap - EXIT
-test ! -e "$BTAR_TARGET"
+test ! -e "$BTAR_OWNED_TARGET"
 test -s "$BTAR_EVIDENCE/build-inputs.json"
 find "$BTAR_EVIDENCE" -type f -print
 ```

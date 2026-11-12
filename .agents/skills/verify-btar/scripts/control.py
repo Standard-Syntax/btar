@@ -122,9 +122,9 @@ def snapshot(target, destination):
 def generation(evidence):
     doctor(evidence)
     target = Path(tempfile.mkdtemp(prefix="btar-verify-"))
-    (evidence / "target.txt").write_text(str(target) + "\n")
     result = {"feature": "context-generation", "status": "FAIL"}
     try:
+        (evidence / "target.txt").write_text(str(target) + "\n")
         def cli(label, *args, expected=0):
             return record(evidence, label, ["bun", CLI, *args], target, expected, terminal=True)
         before = snapshot(target, evidence / "before")
@@ -138,6 +138,7 @@ def generation(evidence):
         assert (target / "pyproject.btar.toml").read_bytes() == profile
         cli("03-refuse-candidate", "context", "generate", "python-toolchain", target, expected=1)
         assert (target / "pyproject.btar.toml").read_bytes() == profile
+        (target / "pyproject.btar.toml").write_text("poisoned candidate\n")
         cli("04-force-candidate", "context", "generate", "python-toolchain", target, "--force")
         assert (target / "pyproject.btar.toml").read_bytes() == profile
         for kind, path in (("agents-md", "AGENTS.md"), ("pre-commit", ".pre-commit-config.yaml"),
@@ -148,10 +149,21 @@ def generation(evidence):
             cli(f"06-refuse-{kind}", "context", "generate", kind, target, expected=1)
             assert (target / path).read_bytes() == original
         cli("07-validate", "context", "validate", target / "AGENTS.md")
+        invalid = target / "invalid-AGENTS.md"
+        invalid.write_text("not an agents file\n")
+        diagnostic = cli("07-invalid", "context", "validate", invalid, expected=1)
+        assert "Issues found:" in diagnostic
         hooks = json.loads((target / ".claude/settings.json").read_text())
-        assert "PreToolUse" in hooks["hooks"] and "PostToolUse" in hooks["hooks"]
+        assert hooks == {"hooks": {
+            "PreToolUse": [{"matcher": "Edit|MultiEdit|Write", "hooks": [
+                {"type": "command", "command": f"cd -- '{target}' && hatch run pyrefly check"}]}],
+            "PostToolUse": [{"matcher": "Edit|MultiEdit|Write", "hooks": [
+                {"type": "command", "command": f"btar analyze '{target}' --json"}]}],
+        }}
         (evidence / "hooks-default.json").write_text(json.dumps(hooks, indent=2) + "\n")
         cli("08-output", "context", "generate", "agents-md", target, "--output", target / "custom/AGENTS.md")
+        assert (target / "custom/AGENTS.md").is_file()
+        assert (target / "custom/AGENTS.md").read_bytes()
         cli("09-hooks-disabled", "context", "generate", "hooks", target, "--no-pre", "--no-post", "--force")
         assert json.loads((target / ".claude/settings.json").read_text()) == {"hooks": {}}
         after = snapshot(target, evidence / "after")
@@ -164,18 +176,34 @@ def generation(evidence):
                               "CI generation, metrics, baselines and fixes NOT_RUN."])
     except BaseException as error:
         result["error"] = str(error)
-        if not (evidence / "after").exists():
-            snapshot(target, evidence / "after")
+        try:
+            if not (evidence / "after").exists():
+                snapshot(target, evidence / "after")
+        except Exception as snapshot_error:
+            result["snapshot_error"] = str(snapshot_error)
         raise
     finally:
-        shutil.rmtree(target)
-        result["cleanup"] = "PASS" if not target.exists() else "FAIL"
+        cleanup_error = None
+        try:
+            shutil.rmtree(target)
+            if target.exists():
+                raise RuntimeError(f"Scratch target still exists: {target}")
+        except Exception as error:
+            cleanup_error = error
+            result.update(status="FAIL", cleanup="FAIL", cleanup_error=str(error))
+        else:
+            result["cleanup"] = "PASS"
         (evidence / "result.json").write_text(json.dumps(result, indent=2) + "\n")
-        assert (evidence / "after").is_dir() and (evidence / "result.json").is_file()
         print(f"Evidence retained: {evidence}")
+        if cleanup_error is not None and sys.exc_info()[0] is None:
+            raise cleanup_error
 
 
 def main():
+    def terminate(signum, _frame):
+        raise SystemExit(128 + signum)
+
+    signal.signal(signal.SIGTERM, terminate)
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("mode", choices=["doctor", "generation", "capture"])
     parser.add_argument("--evidence", required=True, type=Path)

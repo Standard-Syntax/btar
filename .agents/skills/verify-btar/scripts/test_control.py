@@ -10,6 +10,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 
@@ -51,11 +52,19 @@ class ControlTests(unittest.TestCase):
         self.assertEqual((self.evidence / "pipe/stderr.txt").read_text(), "diagnostic\n")
 
     def test_launch_failure_retains_finished_metadata(self):
-        with self.assertRaises(FileNotFoundError):
-            control.record(self.evidence, "missing", [self.root / "missing"], self.root, terminal=True)
-        metadata = json.loads((self.evidence / "missing/command.json").read_text())
-        self.assertIn("finished", metadata)
-        self.assertIsNone(metadata["exit_code"])
+        for terminal in (False, True):
+            with self.subTest(terminal=terminal):
+                label = f"missing-{terminal}"
+                with self.assertRaises(FileNotFoundError):
+                    control.record(self.evidence, label, [self.root / "missing"], self.root, terminal=terminal)
+                metadata = json.loads((self.evidence / label / "command.json").read_text())
+                self.assertIn("finished", metadata)
+                self.assertIn("No such file", metadata["error"])
+                self.assertIsNone(metadata["exit_code"])
+                self.assertTrue((self.evidence / label / "stdout.txt").is_file())
+                self.assertTrue((self.evidence / label / "stderr.txt").is_file())
+        self.assertTrue(metadata["interrupted"])
+        self.assertIn("missing", metadata["error"])
 
     def test_timeout_kills_owned_terminal_processes(self):
         # Adopt test grandchildren so the test can reap them even under a container PID 1.
@@ -100,6 +109,120 @@ class ControlTests(unittest.TestCase):
                                     pass
         finally:
             libc.prctl(36, 0, 0, 0, 0)
+
+    def test_metacharacters_are_literal_arguments(self):
+        marker = self.root / "injected"
+        arg = f"$(touch {marker}); * 'quoted'"
+        for terminal in (False, True):
+            with self.subTest(terminal=terminal):
+                label = f"literal-{terminal}"
+                output = control.record(self.evidence, label, [sys.executable, "-c",
+                    "import json,sys; print(json.dumps(sys.argv[1:]))", arg], self.root, terminal=terminal)
+                self.assertEqual(json.loads(output), [arg])
+                self.assertFalse(marker.exists())
+                self.assertEqual(json.loads((self.evidence / label / "command.json").read_text())["argv"][-1], arg)
+
+    def test_sigterm_kills_process_group_and_finishes_metadata(self):
+        for terminal in (False, True):
+            with self.subTest(terminal=terminal):
+                self.assert_sigterm_cleanup(terminal)
+
+    def assert_sigterm_cleanup(self, terminal):
+        libc = ctypes.CDLL(None, use_errno=True)
+        self.assertEqual(libc.prctl(36, 1, 0, 0, 0), 0)
+        pidfile = self.root / f"pids-{terminal}"
+        code = ("import os,signal,time; signal.signal(signal.SIGHUP,signal.SIG_IGN); "
+                "child=os.fork(); "
+                f"f=open({str(pidfile)!r},'a'); f.write(str(os.getpid())+'\\n'); f.close(); "
+                "time.sleep(60)")
+        label = f"sigterm-{terminal}"
+        command = [sys.executable, str(Path(control.__file__).resolve()), "capture",
+                   "--evidence", str(self.evidence), "--cwd", str(self.root), "--label", label]
+        if terminal:
+            command.append("--terminal")
+        process = subprocess.Popen([*command, "--", sys.executable, "-c", code])
+        pids = []
+        try:
+            deadline = time.monotonic() + 10
+            while time.monotonic() < deadline:
+                if pidfile.exists():
+                    pids = [int(p) for p in pidfile.read_text().splitlines()]
+                    if len(pids) == 2:
+                        break
+                time.sleep(0.02)
+            self.assertEqual(len(pids), 2)
+            process.send_signal(signal.SIGTERM)
+            self.assertEqual(process.wait(timeout=10), 143)
+            for pid in pids:
+                try:
+                    os.waitpid(pid, 0)
+                except ChildProcessError:
+                    pass
+                with self.assertRaises(ProcessLookupError):
+                    os.kill(pid, 0)
+            metadata = json.loads((self.evidence / label / "command.json").read_text())
+            self.assertTrue(metadata["interrupted"])
+            self.assertEqual(metadata["exit_code"], -signal.SIGKILL)
+            self.assertIn("finished", metadata)
+        finally:
+            if process.poll() is None:
+                process.kill()
+                process.wait()
+            for pid in pids:
+                try:
+                    os.kill(pid, signal.SIGKILL)
+                    os.waitpid(pid, 0)
+                except (ProcessLookupError, ChildProcessError):
+                    pass
+            libc.prctl(36, 0, 0, 0, 0)
+
+    def test_cleanup_failure_retains_original_error_and_failed_result(self):
+        target = self.root / "target"
+        target.mkdir()
+        with patch.object(control, "doctor"), patch.object(control.tempfile, "mkdtemp", return_value=str(target)), \
+             patch.object(control, "snapshot", return_value={}), \
+             patch.object(control, "record", side_effect=ValueError("original failure")), \
+             patch.object(control.shutil, "rmtree", side_effect=OSError("cleanup failure")):
+            with self.assertRaisesRegex(ValueError, "original failure") as caught:
+                control.generation(self.evidence)
+        self.assertIsNone(caught.exception.__context__)
+        result = json.loads((self.evidence / "result.json").read_text())
+        self.assertEqual(result["status"], "FAIL")
+        self.assertEqual(result["cleanup"], "FAIL")
+        self.assertEqual(result["error"], "original failure")
+        self.assertEqual(result["cleanup_error"], "cleanup failure")
+
+    def test_cleanup_failure_after_success_prevents_pass(self):
+        for raises in (False, True):
+            with self.subTest(raises=raises):
+                target = self.root / f"target-{raises}"
+                target.mkdir()
+                evidence = self.evidence / f"cleanup-{raises}"
+                evidence.mkdir()
+                with patch.object(control.tempfile, "mkdtemp", return_value=str(target)), \
+                     patch.object(control.shutil, "rmtree", side_effect=OSError("cleanup failed") if raises else None):
+                    with self.assertRaises((RuntimeError, OSError)):
+                        control.generation(evidence)
+                result = json.loads((evidence / "result.json").read_text())
+                self.assertEqual(result["status"], "FAIL")
+                self.assertEqual(result["cleanup"], "FAIL")
+                self.assertIn("files", result)
+                self.assertTrue(target.exists())
+
+    def test_target_evidence_write_failure_still_cleans_target(self):
+        target = self.root / "target"
+        target.mkdir()
+        original_write = Path.write_text
+        def write(path, *args, **kwargs):
+            if path.name == "target.txt":
+                raise OSError("target evidence failed")
+            return original_write(path, *args, **kwargs)
+        with patch.object(control, "doctor"), patch.object(control.tempfile, "mkdtemp", return_value=str(target)), \
+             patch.object(Path, "write_text", write):
+            with self.assertRaisesRegex(OSError, "target evidence failed"):
+                control.generation(self.evidence)
+        self.assertFalse(target.exists())
+        self.assertEqual(json.loads((self.evidence / "result.json").read_text())["cleanup"], "PASS")
 
     def doctor_fixture(self, help_text=HELP):
         for name, content in {
