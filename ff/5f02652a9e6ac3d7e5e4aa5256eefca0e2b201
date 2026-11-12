@@ -1,0 +1,32 @@
+.agents/skills/verify-btar/scripts/test_manual_cleanup.py
+  s_03bde25db9f68e::t_a494daa09e3185 14,38-48
+  s_03bde25db9f68e::t_1bd1cbcbbfb7e1 49
+.agents/skills/verify-btar/scripts/control.py
+  s_03bde25db9f68e::t_39a3abc8c2823a 141-142,158,161,163
+.agents/skills/verify-btar/scripts/test_control.py
+  s_03bde25db9f68e::t_715e3b6c36f754 199,214,216
+  s_03bde25db9f68e::t_e5ff14150a993f 201
+  s_03bde25db9f68e::t_39a3abc8c2823a 66-67,196,204-213,215,217-230
+.agents/skills/verify-btar/PROOF.md
+  s_03bde25db9f68e::t_26623c2a781275 3-15
+  s_03bde25db9f68e::t_91ae281e6ce1d6 23,28
+  s_03bde25db9f68e::t_3c3d2b12f7b46e 29
+.agents/skills/verify-btar/SKILL.md
+  s_03bde25db9f68e::t_91ae281e6ce1d6 41-44,83
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ff5f02652a9e6ac3d7e5e4aa5256eefca0e2b201",
+  "prompts": {},
+  "sessions": {
+    "s_03bde25db9f68e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cd96-f440-7cb3-b2c6-71130ec68b73",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Derek Vitrano <derek.vitrano@gmail.com>"
+    }
+  }
+}
